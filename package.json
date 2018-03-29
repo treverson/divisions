@@ -1,0 +1,35 @@
+{
+  "name": "divisionscore",
+  "version": "0.0.1",
+  "description": "Divisions stake pool",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "npm": "^5.8.0",
+    "zeppelin-solidity": "^1.8.0"
+  },
+  "devDependencies": {
+    "truffle": "^4.1.3"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hdoordt/divisionsCore.git"
+  },
+  "keywords": [
+    "Divisions",
+    "Casper",
+    "Stake",
+    "Pool"
+  ],
+  "author": "Baksteen Blockchain B.V.",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hdoordt/divisionsCore/issues"
+  },
+  "homepage": "https://divisions.com/"
+}
