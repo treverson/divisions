@@ -2,7 +2,7 @@ const expectThrow = require("../../test-helpers/expectThrow");
 const web3Extensions = require("../../test-helpers/web3Extensions");
 web3Extensions.init(web3);
 
-// ============ Test WithdrawalBox ================ //
+// ============ Test WithdrawalBox ============ //
 
 const WithdrawalBox = artifacts.require('WithdrawalBox');
 
@@ -14,13 +14,13 @@ contract('WithdrawalBox', async accounts => {
         withdrawalBox = await WithdrawalBox.new(3, recipient);
     });
 
-    it('should store the block height of the moment it was deployed', async () => {
+    it('stores the block height of the moment it was deployed', async () => {
         let deploymentBlockNumber = (await web3.eth.getTransaction(withdrawalBox.transactionHash)).blockNumber;
         let deployedAt = await withdrawalBox.deployedAt();
         assert.equal(deployedAt.valueOf(), deploymentBlockNumber, "The block number of when the contract was deployed was not set");
     });
 
-    it('should store logout message', async () => {
+    it('stores logout message', async () => {
         let logoutMsg = "iwannalogout";
         await withdrawalBox.setLogoutMessage(logoutMsg);
         assert.equal(logoutMsg, web3.toAscii(await withdrawalBox.logoutMessage()), "The logout message is not correct");
@@ -29,7 +29,8 @@ contract('WithdrawalBox', async accounts => {
     it('only allows its creator to set the logout message', async () => {
         let logoutMsg = "iwannalogout";
         await withdrawalBox.setLogoutMessage(logoutMsg);
-        await expectThrow(withdrawalBox.setLogoutMessage(logoutMsg, {from: accounts[2]}));
+        await expectThrow(withdrawalBox.setLogoutMessage(logoutMsg, {from: accounts[2]}),
+            "cannot set the logout message from an address that is not the owner");
     });
 
     it('can send claimed Ether to the recipient', async () => {

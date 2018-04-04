@@ -1,0 +1,59 @@
+=== Requirements Divisions API ===
+
+The Divisions API basically Collects and publishes information about the pool.
+The (incomplete) list of information the API should collect and publish is specefied below.
+As progress is made, more details are specified.
+
+General pool information
+
+========= Main =========
+	-	Votes per epoch per WithdrawalBox
+		* Distinct parameters of vote message
+		* RLP encoded vote message
+	-	WithdrawalBoxes:
+		* logout messages
+		* deposit block number
+		* can logout
+		* can withdraw
+		* deposit size at start
+		* current deposit size
+	-	Ether in pool
+		* amount in Casper contract
+		* amount in Treasury
+	
+	-	Ether in DIVTokenExchange reserve
+	-	DIV in DIVTokenExchange reserve
+	-	Total supply of DIV
+	-	Current DIV price
+	
+========= Governance =========
+	-	Dividend claiming round start and end times
+	
+	-	Proposals at Senate
+		* maker
+		* yea/nay 
+		* message
+		* description
+	-	Current president
+	
+	-	Cases in Court
+
+Individual user information
+========= Main =========
+	-	DIV balance + ETH equivalent
+	-	DIV allowances
+	-	Orders
+	-	Total ETH staked
+	-	Profit made
+	-	ETH balance
+	-	ETH left for withdrawal at exchange
+	
+========= Governance =========
+	-	DIVG balance
+	-	Votes in senate
+	-	DIVG locked
+	-	Claimable ETH dividend amount and for how long
+	-	Withdrawable ETH dividend
+	-	ETH dividend received
+	
+	-	My Court cases

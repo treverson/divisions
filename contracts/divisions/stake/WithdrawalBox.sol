@@ -16,7 +16,7 @@ contract BaseWithdrawalBox {
 
 contract WithdrawalBox is BaseWithdrawalBox {
 
-    function WithdrawalBox(uint256 _logoutEpoch, address _recipient) public{
+    function WithdrawalBox(uint256 _logoutEpoch, address _recipient) public {
         require(_recipient != msg.sender);
 
         logoutEpoch = _logoutEpoch;
