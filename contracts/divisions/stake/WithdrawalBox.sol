@@ -12,6 +12,8 @@ contract BaseWithdrawalBox {
     function setLogoutMessage(bytes _logoutMessage) external;
 
     event EtherReceived(uint256 amount);
+    event Sweep();
+    event LogoutMessageSet(bytes logoutMessage);
 }
 
 contract WithdrawalBox is BaseWithdrawalBox {
@@ -31,14 +33,18 @@ contract WithdrawalBox is BaseWithdrawalBox {
 
     function sweep() external {
         recipient.transfer(address(this).balance);
+        Sweep();
     }
     
     function setLogoutMessage(bytes _logoutMessage) external onlyStakeManager {
         logoutMessage = _logoutMessage;
+        LogoutMessageSet(_logoutMessage);
     }
 
     modifier onlyStakeManager {
         require(msg.sender == stakeManager);
         _;
     }
+
+    
 }
