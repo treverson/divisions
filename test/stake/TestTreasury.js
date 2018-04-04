@@ -13,6 +13,8 @@ contract('Treasury', async accounts => {
         treasury = await Treasury.new(accounts[1]);
     });
 
+    after(web3.txListener.dispose);
+
     it('sets the treasurer', async () => {
         let treasurerBefore = await treasury.treasurer();
         assert.equal(treasurerBefore, accounts[1],
@@ -86,7 +88,8 @@ contract('Treasury', async accounts => {
         let transferedWei = web3.toWei(3, 'ether');
         let totalPoolBalanceBefore = await treasury.totalPoolBalance();
 
-
+        
+        
         let totalPoolBalanceAfter = await treasury.totalPoolBalance();
     });
 });
