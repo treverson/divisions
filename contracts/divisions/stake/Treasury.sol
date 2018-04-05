@@ -1,20 +1,25 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
 import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract BaseTreasury is Ownable {
+import "./ACasper.sol";
+import "./WithdrawalBox.sol";
+
+contract ATreasury is Ownable {
     address public treasurer;
+    ACasper public casper;
 
     function() external payable;
 
     function totalPoolBalance() external view returns (uint256);
 
-    function setTreasurer(address _treasurer) public onlyOwner();
+    function transferTreasurership(address _treasurer) public onlyOwner();
 
     function depositToPool() public payable;
     function withdrawFromPool(address _to, uint256 _amount) external;
     
-    function transfer(address _to, uint256 _amount) external;
+    function stake(address _to, uint256 _amount, address _validatorAddress, BaseWithdrawalBox withdrawalBox) external;
     function deposit() external payable;
 
     event TreasurershipTransferred(address indexed previousTreasurer, address indexed newTreasurer);
@@ -23,51 +28,40 @@ contract BaseTreasury is Ownable {
     event WithdrawFromPool(address indexed from, uint256 amount);
 
     event Deposit(address indexed from, uint256 amount);
-    event Transfer(address indexed to, uint256 amount);
+    event Stake(address indexed to, address indexed validatorAddress, BaseWithdrawalBox indexed withdrawalBox, uint256 amount);
 }
 
-contract Treasury is BaseTreasury {
+contract Treasury is ATreasury {
+    using SafeMath for uint256;
 
-    function Treasury(address _treasurer) public {
-        setTreasurer(_treasurer);
+    //Wei that is not in the treasury, but invested in other contracts
+    uint256 private weiInvested = 0;
+
+    function Treasury(address _treasurer, ACasper _casper) public {
+        transferTreasurership(_treasurer);
+        casper = _casper;
     }
 
     function() external payable {
     }
 
-    function totalPoolBalance() external view returns (uint256){
-        return 0;
+    function totalPoolBalance() external view returns (uint256) {
+        return weiInvested.add(address(this).balance);
     }
 
-    function setTreasurer(address _treasurer) public onlyOwner() {
+    function transferTreasurership(address _treasurer) public onlyOwner {
         require(_treasurer != address(0));
 
-        TreasurershipTransferred(_treasurer, treasurer);
+        emit TreasurershipTransferred(treasurer, _treasurer);
         treasurer = _treasurer;
     }
 
-    function depositToPool() public payable {
-
-    }
-
-    function withdrawFromPool(address _to, uint256 _amount) external {
-
-    }
-    
-
-    function transfer(address _to, uint256 _amount) external {
-
-    }
-
     function deposit() external payable {
-
+        emit Deposit(msg.sender, msg.value);
     }
 
-    event TreasurershipTransferred(address indexed previousTreasurer, address indexed newTreasurer);
-
-    event DepositToPool(address indexed from, uint256 amount);
-    event WithdrawFromPool(address indexed from, uint256 amount);
-
-    event Deposit(address indexed from, uint256 amount);
-    event Transfer(address indexed to, uint256 amount);
+    modifier onlyTreasurer() {
+        require(msg.sender == treasurer);
+        _;
+    }
 }

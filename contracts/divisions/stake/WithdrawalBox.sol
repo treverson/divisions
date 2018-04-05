@@ -1,6 +1,6 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.21;
 
-contract BaseWithdrawalBox {
+contract AWithdrawalBox {
    
     uint256 public deployedAt;
     address public stakeManager;
@@ -16,7 +16,7 @@ contract BaseWithdrawalBox {
     event LogoutMessageSet(bytes logoutMessage);
 }
 
-contract WithdrawalBox is BaseWithdrawalBox {
+contract WithdrawalBox is AWithdrawalBox {
 
     function WithdrawalBox(uint256 _logoutEpoch, address _recipient) public {
         require(_recipient != msg.sender);
@@ -28,17 +28,17 @@ contract WithdrawalBox is BaseWithdrawalBox {
     }
 
     function() public payable {
-        EtherReceived(msg.value);
+        emit EtherReceived(msg.value);
     }
 
     function sweep() external {
         recipient.transfer(address(this).balance);
-        Sweep();
+        emit Sweep();
     }
     
     function setLogoutMessage(bytes _logoutMessage) external onlyStakeManager {
         logoutMessage = _logoutMessage;
-        LogoutMessageSet(_logoutMessage);
+        emit LogoutMessageSet(_logoutMessage);
     }
 
     modifier onlyStakeManager {

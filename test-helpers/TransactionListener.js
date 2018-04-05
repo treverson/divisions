@@ -26,9 +26,8 @@ module.exports = class {
                 
             });
         });
-        if(timeoutMs) {
-            return Promise.race([p, Timeout.reject(timeoutMs)]);
-        } else return p;
+
+        return Promise.race([p, Timeout.reject(timeoutMs)]);
     }
     
     bind(event) {

@@ -1,7 +1,5 @@
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
-const web3Extensions = require("../../test-helpers/web3Extensions");
-web3Extensions.init(web3);
 
 // ============ Test WithdrawalBox ============ //
 
@@ -15,7 +13,6 @@ contract('WithdrawalBox', async accounts => {
         withdrawalBox = await WithdrawalBox.new(3, recipient);
     });
 
-    after(web3.txListener.dispose);
 
     it('stores the block height of the moment it was deployed', async () => {
         let deploymentBlockNumber = (await web3.eth.getTransaction(withdrawalBox.transactionHash)).blockNumber;
@@ -54,8 +51,8 @@ contract('WithdrawalBox', async accounts => {
             withdrawalBox.sweep.sendTransaction(),
             sweepEvent,
             {}, 
-            "Event not logged",
-            web3.txListener);
+            "Event not logged"
+        );
     });
 
     it('logs an event on setLogoutMessage', async () => {
@@ -65,8 +62,7 @@ contract('WithdrawalBox', async accounts => {
             withdrawalBox.setLogoutMessage.sendTransaction(logoutMsg),
             logoutMessageSetEvent,
             {logoutMessage: web3.toHex(logoutMsg)},
-            "Event not logged with correct params",
-            web3.txListener
+            "Event not logged with correct params"
         );
     });
 });

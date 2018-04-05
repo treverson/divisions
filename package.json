@@ -14,7 +14,7 @@
     "truffle": "^4.1.5"
   },
   "scripts": {
-    "test": "truffle test"
+    "start-truffle": "node node_modules/truffle/build/cli.bundled.js develop --log"
   },
   "repository": {
     "type": "git",
