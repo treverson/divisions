@@ -12,7 +12,7 @@ contract AWithdrawalBox {
     function setLogoutMessage(bytes _logoutMessage) external;
 
     event EtherReceived(uint256 amount);
-    event Sweep();
+    event Sweep(uint256 amount);
     event LogoutMessageSet(bytes logoutMessage);
 }
 
@@ -32,8 +32,9 @@ contract WithdrawalBox is AWithdrawalBox {
     }
 
     function sweep() external {
-        recipient.transfer(address(this).balance);
-        emit Sweep();
+        uint256 balance = address(this).balance;
+        recipient.transfer(balance);
+        emit Sweep(balance);
     }
     
     function setLogoutMessage(bytes _logoutMessage) external onlyStakeManager {

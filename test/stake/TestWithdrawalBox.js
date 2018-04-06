@@ -46,10 +46,11 @@ contract('WithdrawalBox', async accounts => {
     });
 
     it('logs an event on sweep', async () => {
+        let withdrawalBoxBalance = await web3.eth.getBalance(withdrawalBox.address);
         await expectEvent(
             withdrawalBox.sweep.sendTransaction(),
             withdrawalBox.Sweep(),
-            {}
+            { amount: withdrawalBoxBalance }
         );
     });
 
