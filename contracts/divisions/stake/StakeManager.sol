@@ -11,10 +11,10 @@ contract AStakeManager is Ownable {
     ACasper public casper;
     ATreasury public treasury;
 
-    mapping(uint256 => mapping(uint256 => Vote)) votes;
+    mapping(uint256 => mapping(uint256 => VoteMessage)) votes;
     AWithdrawalBox[] public withdrawalBoxes;
 
-    struct Vote {
+    struct VoteMessage {
         bytes messageRLP;
         bytes32 targetHash;
         uint256 targetEpoch;
@@ -22,7 +22,7 @@ contract AStakeManager is Ownable {
         uint256 timestamp;
     }
 
-    function getVote(uint256 _withdrawalBoxIndex, uint256 _epoch)
+    function getVoteMessage(uint256 _withdrawalBoxIndex, uint256 _epoch)
         public
         view
         returns (
