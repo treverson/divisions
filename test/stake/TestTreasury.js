@@ -14,7 +14,7 @@ contract('Treasury', async accounts => {
     before(async () => {
         treasurer = accounts[1];
         casper = await MockCasper.new();
-        treasury = await Treasury.new(treasurer, casper.address);
+        treasury = await Treasury.new(casper.address);
     });
 
     beforeEach(async () => {

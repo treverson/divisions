@@ -29,8 +29,7 @@ contract ATreasury is Ownable {
 contract Treasury is ATreasury {
     using SafeMath for uint256;
 
-    function Treasury(address _treasurer, ACasper _casper) public {
-        transferTreasurership(_treasurer);
+    function Treasury(ACasper _casper) public {
         casper = _casper;
     }
 

@@ -8,5 +8,14 @@ const AWithdrawalBox = artifacts.require('AWithdrawalBox');
 const MockTreasury = artifacts.require('MockTreasury');
 
 contract('StakeManager', async accounts => {
+    let validator;
+    let treasury;
+    let stakeManager;
     
+
+    before(async () => {
+        validator = accounts[9];
+        
+    });
+
 });
