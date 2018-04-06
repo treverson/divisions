@@ -59,6 +59,7 @@ typings/
 
 # vs code settings
 .vscode/
+*.code-workspace
 
 # truffle output folder
 build/

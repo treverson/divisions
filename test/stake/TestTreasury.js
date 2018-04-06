@@ -22,22 +22,18 @@ contract('Treasury', async accounts => {
     })
 
     it('sets the treasurer', async () => {
-        let treasurerBefore = await treasury.treasurer();
-        assert.equal(treasurerBefore, treasurer,
-            "The treasurer was not set correctly in the constructor");
-
         await treasury.transferTreasurership(accounts[2]);
         let treasurerAfter = await treasury.treasurer();
         assert.equal(treasurerAfter, accounts[2],
             "The treasurer was not set");
 
         await expectThrow(treasury.transferTreasurership(0),
-            "cannot set the treasurer to address 0x0"
+            "Cannot set the treasurer to address 0x0"
         );
 
         await expectThrow(
             treasury.transferTreasurership(accounts[3], { from: accounts[2] }),
-            "cannot set the treasurer from an address that is not the owner"
+            "Cannot set the treasurer from an account that is not the owner"
         );
     });
 

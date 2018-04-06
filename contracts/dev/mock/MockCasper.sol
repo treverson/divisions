@@ -1,7 +1,5 @@
 pragma solidity ^0.4.21;
 
-import "../../lib/RLP.sol";
-
 import "../../divisions/stake/ACasper.sol";
 /*  Mock Capser contract. Does not do any checks, 
     but emits events and sets params so that we
@@ -10,9 +8,10 @@ import "../../divisions/stake/ACasper.sol";
     Based on simple_casper.v.py: https://github.com/ethereum/casper/blob/master/casper/contracts/simple_casper.v.py    
 */
 contract MockCasper is ACasper {
-    using RLP for bytes;
-    
+  
     function deposit(address validation_addr, address withdrawal_addr) public payable {
+        emit DepositCalled(validation_addr, withdrawal_addr);
+
         int128 start_dynasty = dynasty + 2;
 
         validator_indexes[withdrawal_addr] = nextValidatorIndex;
@@ -28,4 +27,21 @@ contract MockCasper is ACasper {
 
         nextValidatorIndex++;
     }
+
+    function vote(bytes vote_msg) public {
+        emit VoteCalled(vote_msg);
+    }
+
+    function logout(bytes logout_msg) public {
+        emit LogoutCalled(logout_msg);
+    }
+
+    function withdraw(int128 validator_index) public {
+        emit WithdrawCalled(validator_index);
+    }
+
+    event DepositCalled(address validation_addr, address withdrawal_addr);
+    event VoteCalled(bytes vote_msg);
+    event LogoutCalled(bytes logout_msg);
+    event WithdrawCalled(int128 validator_index);
 }

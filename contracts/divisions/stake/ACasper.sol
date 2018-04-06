@@ -27,4 +27,6 @@ contract ACasper {
 
     function deposit(address validation_addr, address withdrawal_addr) public payable;
 
+    function vote(bytes vote_msg) public;
+
 }
