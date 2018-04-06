@@ -6,10 +6,10 @@ module.exports = async (transaction, event, params, message) => {
     if(!message) message = "Event not logged with correct params";
     let out;
     try {
-        out = await transactionListener.listen(transaction, event, 3000);
+        out = await transactionListener.listen(transaction, event, 8000);
         
     } catch (err) {
-        assert.fail(message);
+        assert.fail(err.toString());
         transactionListener.dispose();
         return;
     }

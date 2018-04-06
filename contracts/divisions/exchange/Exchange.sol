@@ -16,8 +16,8 @@ contract AExchange {
     Order[] public sellOrders;
     uint256 public sellOrderCursor;
 
-    function weiReserve() returns (uint256);
-    function divReserve() returns (uint256);
+    function weiReserve() public view returns (uint256);
+    function divReserve() public view returns (uint256);
 
     function placeBuyOrder() payable external;
     function placeSellOrder() external;

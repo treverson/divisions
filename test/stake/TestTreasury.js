@@ -4,13 +4,17 @@ const expectEvent = require("../../test-helpers/expectEvent");
 // ============ Test Treasury ============ //
 
 const Treasury = artifacts.require('Treasury');
+const MockCasper = artifacts.require('MockCasper');
 
 contract('Treasury', async accounts => {
     let treasury;
+    let casper;
     let treasurer;
+
     before(async () => {
         treasurer = accounts[1];
-        treasury = await Treasury.new(treasurer);
+        casper = await MockCasper.new();
+        treasury = await Treasury.new(treasurer, casper.address);
     });
 
     beforeEach(async () => {
@@ -19,7 +23,7 @@ contract('Treasury', async accounts => {
 
     it('sets the treasurer', async () => {
         let treasurerBefore = await treasury.treasurer();
-        assert.equal(treasurerBefore, accounts[1],
+        assert.equal(treasurerBefore, treasurer,
             "The treasurer was not set correctly in the constructor");
 
         await treasury.transferTreasurership(accounts[2]);
@@ -28,10 +32,13 @@ contract('Treasury', async accounts => {
             "The treasurer was not set");
 
         await expectThrow(treasury.transferTreasurership(0),
-            "cannot set the treasurer to address 0x0");
+            "cannot set the treasurer to address 0x0"
+        );
+
         await expectThrow(
-            treasury.transferTreasurership(accounts[3]), { from: accounts[2] },
-            "cannot set the treasurer from an address that is not the owner");
+            treasury.transferTreasurership(accounts[3], { from: accounts[2] }),
+            "cannot set the treasurer from an address that is not the owner"
+        );
     });
 
     it('logs an event on transferTreasurership', async () => {
@@ -44,104 +51,101 @@ contract('Treasury', async accounts => {
         );
     });
 
-    it('updates the total pool balance when a pool deposit is made', async () => {
-        let depositedWei = web3.toWei(2, 'ether');
-        let totalPoolBalanceBefore = await treasury.totalPoolBalance();
+    it('transfers ether', async () => {
+        let transferredWei = web3.toWei(3, 'ether');
+        await treasury.sendTransaction({ value: transferredWei });
 
-        await treasury.depositToPool({ value: depositedWei });
-        let totalPoolBalanceAfter = await treasury.totalPoolBalance();
+        let recipient = accounts[7];
+        let recipientBalanceBefore = await web3.eth.getBalance(recipient);
+
+        await treasury.transfer(recipient, transferredWei, { from: treasurer });
+
+        let recipientBalanceAfter = await web3.eth.getBalance(recipient);
+
         assert.equal(
-            totalPoolBalanceAfter.valueOf(),
-            totalPoolBalanceBefore.plus(depositedWei).valueOf(),
-            "The total pool balance was not updated correctly"
-        );
-    });
-
-    it('updates the pool balance when a withdrawal is made from the pool', async () => {
-        let withdrawnWei = web3.toWei(3, 'ether');
-        await treasury.depositToPool({ value: withdrawnWei });
-
-        let totalPoolBalanceBefore = await treasury.totalPoolBalance();
-
-        await treasury.withdrawFromPool(accounts[4], withdrawnWei, { from: treasurer });
-
-        let totalPoolBalanceAfter = await treasury.totalPoolBalance();
-        assert.equal(
-            totalPoolBalanceAfter.valueOf(),
-            totalPoolBalanceBefore.minus(withdrawnWei).valueOf(),
-            "The total pool balance was not updated correctly"
+            recipientBalanceAfter.valueOf(),
+            recipientBalanceBefore.plus(transferredWei).valueOf(),
+            "The ether was not transferred"
         );
 
-        await treasury.depositToPool({ value: withdrawnWei });
-        await expectThrow(
-            treasury.withdrawFromPool(accounts[1], withdrawnWei, { from: accounts[2] },
-                "Cannot withdraw with account that is not the treasurer")
-        );
+        await treasury.sendTransaction({ value: transferredWei });
+        await expectThrow(treasury.transfer(recipient, transferredWei), "Only the treasurer can transfer ether");
 
     });
 
-    it('sends withdrawn ether to the correct address', async () => {
-        let withdrawnWei = web3.toWei(3, 'ether');
-        await treasury.sendTransaction({ value: withdrawnWei });
+    it('logs an event on transfer', async () => {
+        let transferredWei = web3.toBigNumber(web3.toWei(2, 'ether'));
+        await treasury.sendTransaction({ value: transferredWei });
 
-        let accountBalanceBefore = await web3.eth.getBalance(accounts[5]);
-        await treasury.withdrawFromPool(accounts[5], withdrawnWei, { from: treasurer });
+        let recipient = accounts[0];
 
-        let accountBalanceAfter = await web3.eth.getBalance(accounts[5]);
-
-        assert.equal(
-            accountBalanceAfter.valueOf(),
-            accountBalanceBefore.plus(withdrawnWei).valueOf(),
-            "The ether was not withdrawn to the account"
-        );
-    });
-
-    it('invests ether within the pool', async () => {
-        let transferedWei = web3.toWei(3, 'ether');
-        await treasury.sendTransaction({ value: transferedWei });
-
-        let totalPoolBalanceBefore = await treasury.totalPoolBalance();
-        let transferTo = accounts[6];
-        let accountBalanceBefore = await web3.eth.getBalance(transferTo);
-
-        await treasury.invest(transferTo, transferedWei, { from: treasurer });
-
-        let totalPoolBalanceAfter = await treasury.totalPoolBalance();
-        let accountBalanceAfter = await web3.eth.getBalance(transferTo);
-
-        assert.equal(
-            totalPoolBalanceAfter.valueOf(),
-            totalPoolBalanceBefore.valueOf(),
-            "When transfering withing the pool, the total pool balance should not be altered"
-        );
-
-        await treasury.sendTransaction({ value: transferedWei });
-        await expectThrow(
-            treasury.invest(accounts[3], transferedWei, { from: accounts[0] },
-                "Only the treasurer can transfer Ether from the Treasury"
-            ));
-    });
-
-    it('logs an event on invest', async () => {
-        let transferedWei = web3.toWei(3, 'ether');
-        await treasury.sendTransaction({ value: transferedWei });
-
-        let transferTo = accounts[2];
-
-        await expectEvent(
-            treasury.invest(transferTo, transferedWei, { from: treasurer }),
+        expectEvent(
+            treasury.transfer.sendTransaction(recipient, transferredWei, { from: treasurer }),
             treasury.Transfer(),
-            { to: transferTo, amount: transferedWei },
+            { to: recipient, amount: transferredWei }
         );
     });
 
     it('logs an event on deposit', async () => {
-        let investedWei = web3.toWei(3, 'ether');
+        let investedWei = web3.toBigNumber(web3.toWei(3, 'ether'));
 
         await expectEvent(
-            treasury.deposit({ value: investedWei }),
+            treasury.deposit.sendTransaction({ value: investedWei }),
             treasury.Deposit(),
             { from: accounts[0], amount: investedWei },
+        );
+
+    });
+
+    it('stakes ether with Casper', async () => {
+        let stakedWei = web3.toBigNumber(web3.toWei(3, 'ether'));
+        await treasury.sendTransaction({ value: stakedWei });
+
+        let validatorAddress = accounts[8];
+        let withdrawalBox = accounts[9];
+
+        let nextValidatorIndex = await casper.nextValidatorIndex();
+        let startDynasty = (await casper.dynasty()).plus(2);
+        
+        await expectEvent(
+            treasury.stake.sendTransaction(
+                stakedWei,
+                validatorAddress,
+                withdrawalBox,
+                { from: treasurer }
+            ),
+            casper.Deposit(),
+            {
+                _from: treasury.address,
+                _validator_index: nextValidatorIndex,
+                _validation_address: validatorAddress,
+                _start_dyn: startDynasty,
+                _amount: stakedWei
+            }
+        );
+
+        await treasury.sendTransaction({ value: stakedWei });
+        await expectThrow(
+            treasury.stake(stakedWei, validatorAddress, withdrawalBox),
+            "Only the teasurer can stake Ether"
+        );
+    });
+
+    it('logs an event on stake', async () => {
+        let stakedWei = web3.toBigNumber(web3.toWei(1, 'ether'));
+        await treasury.sendTransaction({ value: stakedWei });
+        
+        let validatorAddress = accounts[8];
+        let withdrawalBox = accounts[9];
+
+        await expectEvent(
+            treasury.stake.sendTransaction(stakedWei, validatorAddress, withdrawalBox, { from: treasurer }),
+            treasury.Stake(),
+            {
+                validatorAddress: validatorAddress,
+                withdrawalBox: withdrawalBox,
+                amount: stakedWei
+            }
         );
     });
 });

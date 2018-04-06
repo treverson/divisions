@@ -29,7 +29,7 @@ contract('WithdrawalBox', async accounts => {
     it('only allows its creator to set the logout message', async () => {
         let logoutMsg = "iwannalogout";
         await withdrawalBox.setLogoutMessage(logoutMsg);
-        await expectThrow(withdrawalBox.setLogoutMessage(logoutMsg, {from: accounts[2]}),
+        await expectThrow(withdrawalBox.setLogoutMessage(logoutMsg, { from: accounts[2] }),
             "cannot set the logout message from an address that is not the owner");
     });
 
@@ -46,23 +46,19 @@ contract('WithdrawalBox', async accounts => {
     });
 
     it('logs an event on sweep', async () => {
-        let sweepEvent = withdrawalBox.Sweep();
         await expectEvent(
             withdrawalBox.sweep.sendTransaction(),
-            sweepEvent,
-            {}, 
-            "Event not logged"
+            withdrawalBox.Sweep(),
+            {}
         );
     });
 
     it('logs an event on setLogoutMessage', async () => {
-        let logoutMessageSetEvent = withdrawalBox.LogoutMessageSet();
         let logoutMsg = "iwannalogout";
         await expectEvent(
             withdrawalBox.setLogoutMessage.sendTransaction(logoutMsg),
-            logoutMessageSetEvent,
-            {logoutMessage: web3.toHex(logoutMsg)},
-            "Event not logged with correct params"
+            withdrawalBox.LogoutMessageSet(),
+            { logoutMessage: web3.toHex(logoutMsg) }
         );
     });
 });

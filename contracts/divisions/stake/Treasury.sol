@@ -12,30 +12,22 @@ contract ATreasury is Ownable {
 
     function() external payable;
 
-    function totalPoolBalance() external view returns (uint256);
-
     function transferTreasurership(address _treasurer) public onlyOwner();
 
-    function depositToPool() public payable;
-    function withdrawFromPool(address _to, uint256 _amount) external;
-    
-    function stake(address _to, uint256 _amount, address _validatorAddress, BaseWithdrawalBox withdrawalBox) external;
+    function transfer(address _to, uint256 _amount) external;
     function deposit() external payable;
+
+    function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external;
 
     event TreasurershipTransferred(address indexed previousTreasurer, address indexed newTreasurer);
 
-    event DepositToPool(address indexed from, uint256 amount);
-    event WithdrawFromPool(address indexed from, uint256 amount);
-
+    event Transfer(address indexed to, uint256 amount);
     event Deposit(address indexed from, uint256 amount);
-    event Stake(address indexed to, address indexed validatorAddress, BaseWithdrawalBox indexed withdrawalBox, uint256 amount);
+    event Stake(address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox, uint256 amount);
 }
 
 contract Treasury is ATreasury {
     using SafeMath for uint256;
-
-    //Wei that is not in the treasury, but invested in other contracts
-    uint256 private weiInvested = 0;
 
     function Treasury(address _treasurer, ACasper _casper) public {
         transferTreasurership(_treasurer);
@@ -43,10 +35,7 @@ contract Treasury is ATreasury {
     }
 
     function() external payable {
-    }
-
-    function totalPoolBalance() external view returns (uint256) {
-        return weiInvested.add(address(this).balance);
+        emit Deposit(msg.sender, msg.value);
     }
 
     function transferTreasurership(address _treasurer) public onlyOwner {
@@ -56,8 +45,22 @@ contract Treasury is ATreasury {
         treasurer = _treasurer;
     }
 
+    function transfer(address _to, uint256 _amount) external onlyTreasurer {
+        _to.transfer(_amount);
+        emit Transfer(_to, _amount);
+    }
+
     function deposit() external payable {
-        emit Deposit(msg.sender, msg.value);
+        handleDeposit(msg.sender, msg.value);
+    }
+
+    function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external onlyTreasurer {
+        casper.deposit.value(_amount)(_validatorAddress, _withdrawalBox);
+        emit Stake(_validatorAddress, _withdrawalBox, _amount);
+    }
+
+    function handleDeposit(address sender, uint256 value) internal {
+        emit Deposit(sender, value);
     }
 
     modifier onlyTreasurer() {
