@@ -13,7 +13,6 @@ contract('WithdrawalBox', async accounts => {
         withdrawalBox = await WithdrawalBox.new(3, recipient);
     });
 
-
     it('stores the block height of the moment it was deployed', async () => {
         let deploymentBlockNumber = (await web3.eth.getTransaction(withdrawalBox.transactionHash)).blockNumber;
         let deployedAt = await withdrawalBox.deployedAt();
@@ -22,14 +21,23 @@ contract('WithdrawalBox', async accounts => {
 
     it('stores logout message', async () => {
         let logoutMsg = "iwannalogout";
-        await withdrawalBox.setLogoutMessage(logoutMsg);
-        assert.equal(logoutMsg, web3.toAscii(await withdrawalBox.logoutMessage()), "The logout message is not correct");
+        let validatorIndex = web3.toBigNumber(10);
+        let epoch = web3.toBigNumber(3);
+        await withdrawalBox.setLogoutMessage(logoutMsg, validatorIndex, epoch);
+
+        let logoutMessage = await withdrawalBox.logoutMessage();
+
+        assert.equal(web3.toAscii(logoutMessage[0]), logoutMsg, "The logout message is not correct");
+        assert.equal(logoutMessage[1].valueOf(), validatorIndex.valueOf(), "The validator index was not stored");
+        assert.equal(logoutMessage[2].valueOf(), epoch.valueOf(), "The epoch was not stored");
     });
 
     it('only allows its creator to set the logout message', async () => {
         let logoutMsg = "iwannalogout";
-        await withdrawalBox.setLogoutMessage(logoutMsg);
-        await expectThrow(withdrawalBox.setLogoutMessage(logoutMsg, { from: accounts[2] }),
+        let validatorIndex = web3.toBigNumber(10);
+        let epoch = web3.toBigNumber(3);
+
+        await expectThrow(withdrawalBox.setLogoutMessage(logoutMsg, validatorIndex, epoch, { from: accounts[2] }),
             "cannot set the logout message from an address that is not the owner");
     });
 
@@ -56,10 +64,17 @@ contract('WithdrawalBox', async accounts => {
 
     it('logs an event on setLogoutMessage', async () => {
         let logoutMsg = "iwannalogout";
+        let validatorIndex = web3.toBigNumber(10);
+        let epoch = web3.toBigNumber(3);
+
         await expectEvent(
-            withdrawalBox.setLogoutMessage.sendTransaction(logoutMsg),
+            withdrawalBox.setLogoutMessage.sendTransaction(logoutMsg, validatorIndex, epoch),
             withdrawalBox.LogoutMessageSet(),
-            { logoutMessage: web3.toHex(logoutMsg) }
+            {
+                messageRLP: web3.toHex(logoutMsg),
+                validatorIndex: validatorIndex,
+                epoch: epoch
+            }
         );
     });
 });

@@ -6,14 +6,20 @@ contract AWithdrawalBox {
     address public stakeManager;
     address public recipient;
     uint256 public logoutEpoch;
-    bytes public logoutMessage;
+    LogoutMessage public logoutMessage;
+
+    struct LogoutMessage {
+        bytes messageRLP;
+        uint256 validatorIndex;
+        uint256 epoch;
+    }
 
     function sweep() external;
-    function setLogoutMessage(bytes _logoutMessage) external;
+    function setLogoutMessage(bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external;
 
     event EtherReceived(uint256 amount);
     event Sweep(uint256 amount);
-    event LogoutMessageSet(bytes logoutMessage);
+    event LogoutMessageSet(bytes messageRLP, uint256 indexed validatorIndex, uint256 epoch);
 }
 
 contract WithdrawalBox is AWithdrawalBox {
@@ -37,9 +43,14 @@ contract WithdrawalBox is AWithdrawalBox {
         emit Sweep(balance);
     }
     
-    function setLogoutMessage(bytes _logoutMessage) external onlyStakeManager {
-        logoutMessage = _logoutMessage;
-        emit LogoutMessageSet(_logoutMessage);
+    function setLogoutMessage(bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external onlyStakeManager {
+        logoutMessage = LogoutMessage({
+            messageRLP: _messageRLP,
+            validatorIndex: _validatorIndex,
+            epoch: _epoch
+        });
+
+        emit LogoutMessageSet(_messageRLP, _validatorIndex, _epoch);
     }
 
     modifier onlyStakeManager {
