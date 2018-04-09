@@ -17,10 +17,6 @@ contract AWithdrawalBox {
     function sweep() external;
     function setLogoutMessage(bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external;
 
-    function validatorIndex() external view returns(uint256) {
-        return logoutMessage.validatorIndex;
-    }
-
     event EtherReceived(uint256 amount);
     event Sweep(uint256 amount);
     event LogoutMessageSet(bytes messageRLP, uint256 indexed validatorIndex, uint256 epoch);

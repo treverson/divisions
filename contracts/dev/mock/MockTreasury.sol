@@ -25,6 +25,6 @@ contract MockTreasury is ATreasury {
         emit StakeCalled(_amount, _validatorAddress, _withdrawalBox);
     }
 
-    event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed _withdrawalBox);
+    event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox);
 
 }

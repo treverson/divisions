@@ -8,6 +8,10 @@ const AWithdrawalBox = artifacts.require('AWithdrawalBox');
 const MockTreasury = artifacts.require('MockTreasury');
 const MockCasper = artifacts.require('MockCasper');
 
+const minDepositSize = web3.toWei(1, 'ether');
+const epochLength = 20;
+const epochsBeforeLogout = 10;
+
 contract('StakeManager', async accounts => {
     let casper;
     let validator;
@@ -16,14 +20,24 @@ contract('StakeManager', async accounts => {
 
     before(async () => {
         validator = accounts[9];
-        casper = await MockCasper.new();
+
+        casper = await MockCasper.new(minDepositSize, epochLength);
+
         treasury = await MockTreasury.new(casper.address);
-        stakeManager = await StakeManager.new(casper.address, validator, treasury.address);
+
+        stakeManager = await StakeManager.new(
+            casper.address,
+            validator,
+            treasury.address,
+            epochsBeforeLogout
+        );
+
         await treasury.transferTreasurership(stakeManager.address);
     });
 
     beforeEach(async () => {
         await stakeManager.transferValidatorship(validator);
+        await stakeManager.setTreasury(treasury.address)
     });
 
     it('transfers validatorship', async () => {
@@ -50,7 +64,7 @@ contract('StakeManager', async accounts => {
         let newValidator = accounts[8];
 
         expectEvent(
-            stakeManager.transferTreasurership.sendTransaction(newValidator),
+            stakeManager.transferValidatorship.sendTransaction(newValidator),
             stakeManager.ValidatorshipTransferred(),
             { oldValidator: oldValidator, newValidator: newValidator }
         );
@@ -59,7 +73,7 @@ contract('StakeManager', async accounts => {
     it('sets the treasury', async () => {
         let expectedNewTreasury = accounts[7];
 
-        await stakeManager.setTreasury(newTreasury);
+        await stakeManager.setTreasury(expectedNewTreasury);
 
         let actualNewTreasury = await stakeManager.treasury();
         assert.equal(actualNewTreasury, expectedNewTreasury, "The treasury was not set correctly");
@@ -72,37 +86,56 @@ contract('StakeManager', async accounts => {
     });
 
     it('logs an event on setTreasury', async () => {
-        let oldTreasury = stakeManager.treasury();
+        let oldTreasury = await stakeManager.treasury();
         let newTreasury = accounts[6];
 
         await expectEvent(
-            stakeManager.setTreasury(newTreasury),
+            stakeManager.setTreasury.sendTransaction(newTreasury),
             stakeManager.TreasurySet(),
             { oldTreasury: oldTreasury, newTreasury: newTreasury }
         );
     });
 
     it('decides how much ether can be staked', async () => {
+        let depositedWei = web3.toWei(2, 'ether');
+        await treasury.sendTransaction({ value: depositedWei, from: accounts[8] });
+
         // StakeManager can deploy withdrawalBoxes as soon as there's enough ether available
 
         // As of now, it stakes all ether that in currently in the treasury
-        assert.fail('TODO');
+        let treasuryBalance = await web3.eth.getBalance(treasury.address);
+        let stakeAmount = await stakeManager.getStakeAmount();
+
+        assert.equal(
+            stakeAmount.valueOf(),
+            treasuryBalance.valueOf(),
+            "The stake amount was not equal to the balance of the treasury"
+        );
     });
 
+    it('decides at which epoch withdrawals can be made', async () => {
+        let currentEpoch = await casper.current_epoch();
+        let logoutEpoch = await stakeManager.logoutEpoch();
+        assert.equal(
+            logoutEpoch.valueOf(),
+            currentEpoch.plus(epochsBeforeLogout).valueOf(),
+            "The epic at which a logout can be made, should equal currentEpoch (" + currentEpoch.valueOf() +") + epochsbeforeLogout (" + epochsBeforeLogout + ")"
+        );
+    })
+
     it('makes casper deposits', async () => {
-        let depositedWei = web3.toWei(32, 'ether');
-        await treasury.sendTransaction({ value: depositedWei, from: accounts[8] });
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[8] });
 
         let numWithdrawalBoxesBefore = await stakeManager.withdrawalBoxesCount();
-        let maxStakeAmount = await stakeManager.maxStakeAmount();
+        let stakeAmount = await stakeManager.getStakeAmount();
 
         await expectEvent(
             stakeManager.makeStakeDeposit.sendTransaction(),
             treasury.StakeCalled(),
             {
-               amount: depositedWei,
-               validtorAddress: validator,
-               withdrawalBox: '@any'
+                amount: stakeAmount,
+                validatorAddress: validator,
+                withdrawalBox: '@any'
             }
         );
 
@@ -116,8 +149,7 @@ contract('StakeManager', async accounts => {
     });
 
     it('logs an event on makeStakeDeposit', async () => {
-        let depositedWei = web3.toWei(32, 'ether');
-        await treasury.sendTransaction({ value: depositedWei, from: accounts[7] });
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[7] });
 
         let nextValidatorIndex = await casper.next_validator_index();
 
@@ -126,22 +158,19 @@ contract('StakeManager', async accounts => {
             stakeManager.WithdrawalBoxDeployed(),
             {
                 withdrawalBox: '@any',
-                validatorIndex: nextValidatorIndex
             }
         );
     });
 
     it('forwards votes to casper and stores them alongside their unencoded parameters', async () => {
-        let depositedWei = web3.toWei(32, 'ether');
-        await treasury.sendTransaction({ value: depositedWei, from: accounts[7] });
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[7] });
 
         await stakeManager.makeStakeDeposit();
 
         let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
-        let withdrawalBoxAddress = await stakeManager.withdrawalBox(lastWithdrawalBoxIndex);
-        let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
-        let validatorIndex = await withdrawalBox.validatorIndex();
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
 
         let messageRLP = "iwannavote";
         let targetHash = "targetHash";
@@ -155,31 +184,30 @@ contract('StakeManager', async accounts => {
                 targetHash,
                 targetEpoch,
                 sourceEpoch,
-                {from: validator}
+                { from: validator }
             ),
             casper.VoteCalled(),
-            { vote_msg: messageRLP }
+            { vote_msg: web3.fromAscii(messageRLP) }
         );
 
         let voteMessage = new VoteMessage(await stakeManager.getVoteMessage(validatorIndex, targetEpoch));
-        assert.equal(voteMessage.messageRLP, messageRLP, "The encoded message was not stored correctly");
-        assert.equal(voteMessage.validatorIndex, validatorIndex, "The validator index was not stored correctly");
-        assert.equal(voteMessage.targetHash, targetHash, "The target hash was not stored correctly");
+
+        assert.equal(web3.toAscii(voteMessage.messageRLP), messageRLP, "The encoded message was not stored correctly");
+        assert.equal(web3.toAscii(voteMessage.targetHash).substr(0, targetHash.length), targetHash, "The target hash was not stored correctly");
         assert.equal(voteMessage.targetEpoch, targetEpoch, "The target epoch was not stored correctly");
         assert.equal(voteMessage.sourceEpoch, sourceEpoch, "The source epoch was not stored correctly");
     });
 
     it('only lets the validator cast votes', async () => {
-        let depositedWei = web3.toWei(32, 'ether');
-        await treasury.sendTransaction({ value: depositedWei, from: accounts[4] });
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[4] });
 
         await stakeManager.makeStakeDeposit();
 
         let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
-        let withdrawalBoxAddress = await stakeManager.withdrawalBox(lastWithdrawalBoxIndex);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
         let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
-        let validatorIndex = await withdrawalBox.validatorIndex();
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
 
         let messageRLP = "iwannavote";
         let targetHash = "targetHash";
@@ -198,21 +226,16 @@ contract('StakeManager', async accounts => {
         )
     });
 
-    it('only stores votes if the vote was made without errors', async () => {
-        assert.fail('TODO');
-    });
-
     it('logs an event on vote', async () => {
-        let depositedWei = web3.toWei(32, 'ether');
-        await treasury.sendTransaction({ value: depositedWei, from: accounts[7] });
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[7] });
 
         await stakeManager.makeStakeDeposit();
 
         let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
-        let withdrawalBoxAddress = await stakeManager.withdrawalBox(lastWithdrawalBoxIndex);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
         let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
-        let validatorIndex = await withdrawalBox.validatorIndex();
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
 
         let messageRLP = "iwannavote";
         let targetHash = "targetHash";
@@ -225,75 +248,102 @@ contract('StakeManager', async accounts => {
                 validatorIndex,
                 targetHash,
                 targetEpoch,
-                sourceEpoch
+                sourceEpoch,
+                { from: validator }
             ),
-            StakeManager.VoteCast(),
+            stakeManager.VoteCast(),
             {
-                messageRLP: messageRLP,
-                validatorIndex: validatorIndex,
-                targetHash: targetHash,
-                targetEpoch: targetEpoch,
-                sourceEpoch: sourceEpoch
+                messageRLP: web3.toHex(messageRLP),
+                validatorIndex: web3.toBigNumber(validatorIndex),
+                targetHash: web3.fromAscii(targetHash).padEnd(66, '0'), // = 8 bytes + '0x'
+                targetEpoch: web3.toBigNumber(targetEpoch),
+                sourceEpoch: web3.toBigNumber(sourceEpoch)
             }
         );
     });
 
     it('sets logout messages at given WithdrawalBoxes', async () => {
-        let depositedWei = web3.toWei(32, 'ether');
-        await treasury.sendTransaction({ value: depositedWei, from: accounts[6] });
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
 
         let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
-        let withdrawalBoxAddress = await stakeManager.withdrawalBox(lastWithdrawalBoxIndex);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
         let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
         let logoutMessageRLP = "iwannalogout";
-        let validatorIndex = await withdrawalBox.validatorIndex();
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
         let epoch = 100;
+
         await expectEvent(
             stakeManager.setLogoutMessage.sendTransaction(
-                withdrawalBox.address,
-                messageRLP,
+                withdrawalBoxAddress,
+                logoutMessageRLP,
                 validatorIndex,
-                epoch
+                epoch,
+                { from: validator }
             ),
             withdrawalBox.LogoutMessageSet(),
             {
-                messageRLP: logoutMessageRLP,
+                messageRLP: web3.toHex(logoutMessageRLP),
                 validatorIndex: validatorIndex,
-                epoch: epoch
+                epoch: web3.toBigNumber(epoch)
             }
         );
 
     });
 
-    it('logs an event on setLogoutMessage', async () => {
-        let depositedWei = web3.toWei(32, 'ether');
-        await treasury.sendTransaction({ value: depositedWei, from: accounts[6] });
+    it('only lets the validator set logout messages', async () => {
+
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
 
         let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
-        let withdrawalBoxAddress = await stakeManager.withdrawalBox(lastWithdrawalBoxIndex);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
         let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
         let logoutMessageRLP = "iwannalogout";
-        let validatorIndex = await withdrawalBox.validatorIndex();
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
         let epoch = 100;
-        await expectEvent(
+
+        await expectThrow(
             stakeManager.setLogoutMessage.sendTransaction(
-                withdrawalBox.address,
-                messageRLP,
+                withdrawalBoxAddress,
+                logoutMessageRLP,
                 validatorIndex,
                 epoch
             ),
+            "Only the validator can set logout messages"
+        );
+
+    });
+
+    it('logs an event on setLogoutMessage', async () => {
+        await treasury.sendTransaction({ value: minDepositSize, from: accounts[6] });
+
+        await stakeManager.makeStakeDeposit();
+
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+
+        let logoutMessageRLP = "iwannalogout";
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let epoch = 100;
+        await expectEvent(
+            stakeManager.setLogoutMessage.sendTransaction(
+                withdrawalBoxAddress,
+                logoutMessageRLP,
+                validatorIndex,
+                epoch,
+                { from: validator }
+            ),
             stakeManager.LogoutMessageSet(),
             {
-                withdrawalBox: withdrawalBox.address,
-                messageRLP: logoutMessageRLP,
+                withdrawalBox: withdrawalBoxAddress,
+                messageRLP: web3.toHex(logoutMessageRLP),
                 validatorIndex: validatorIndex,
-                epoch: epoch
+                epoch: web3.toBigNumber(epoch)
             }
         );
     });

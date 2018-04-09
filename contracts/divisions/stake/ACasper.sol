@@ -15,6 +15,10 @@ contract ACasper {
         address addr;
         address withdrawal_addr;
     }
+    int128 public current_epoch = 0;
+    
+    int128 public epoch_length;
+    int128 public min_deposit_size;
 
     int128 public dynasty = 0;
 

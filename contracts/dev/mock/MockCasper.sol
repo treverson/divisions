@@ -11,6 +11,11 @@ contract MockCasper is ACasper {
     bytes32 constant public invalid_vote_message = "thisvoteisinvalid";
     bytes32 public invalid_vote_message_hash = keccak256(invalid_vote_message_hash);
 
+    function MockCasper(int128 _min_deposit_size, int128 _epoch_length) public {
+        min_deposit_size = _min_deposit_size;
+        epoch_length = _epoch_length;
+    }
+
     function deposit(address validation_addr, address withdrawal_addr) public payable {
         emit DepositCalled(validation_addr, withdrawal_addr, msg.value);
 

@@ -16,8 +16,10 @@ module.exports = async (transaction, event, params, message) => {
     delete out.txHash;
 
     for(var key in params){
-        if(params[key] === '@any')
+        if(params[key] === '@any' && out[key]){
             delete params[key];
+            delete out[key];
+        }
     }
 
     assert.deepEqual(out, params, message);

@@ -6,6 +6,10 @@ const expectEvent = require("../../test-helpers/expectEvent");
 const Treasury = artifacts.require('Treasury');
 const MockCasper = artifacts.require('MockCasper');
 
+
+const minDepositSize = web3.toWei(1, 'ether');
+const epochLength = 20;
+
 contract('Treasury', async accounts => {
     let treasury;
     let casper;
@@ -13,7 +17,7 @@ contract('Treasury', async accounts => {
 
     before(async () => {
         treasurer = accounts[1];
-        casper = await MockCasper.new();
+        casper = await MockCasper.new(minDepositSize, epochLength);
         treasury = await Treasury.new(casper.address);
     });
 
