@@ -20,7 +20,7 @@ contract ACasper {
 
     mapping(int128 => Validator) public validators;
 
-    int128 public nextValidatorIndex = 1;
+    int128 public next_validator_index = 1;
     mapping(address => int128) public validator_indexes;
 
     int128 internal default_end_dynasty = 1000000000000000000000000000000;

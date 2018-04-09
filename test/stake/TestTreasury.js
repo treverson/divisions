@@ -100,7 +100,7 @@ contract('Treasury', async accounts => {
         let validatorAddress = accounts[8];
         let withdrawalBox = accounts[9];
 
-        let nextValidatorIndex = await casper.nextValidatorIndex();
+        let nextValidatorIndex = await casper.next_validator_index();
         let startDynasty = (await casper.dynasty()).plus(2);
         
         await expectEvent(

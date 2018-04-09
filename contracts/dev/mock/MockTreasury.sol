@@ -5,8 +5,7 @@ import "../../divisions/stake/ACasper.sol";
 
 contract MockTreasury is ATreasury {
     
-    function MockTreasury(address _treasurer, ACasper _casper) public {
-        transferTreasurership(_treasurer);
+    function MockTreasury(ACasper _casper) public {
         casper = _casper;
     }
 
@@ -23,6 +22,9 @@ contract MockTreasury is ATreasury {
     }
 
     function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external {
+        emit StakeCalled(_amount, _validatorAddress, _withdrawalBox);
     }
+
+    event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed _withdrawalBox);
 
 }

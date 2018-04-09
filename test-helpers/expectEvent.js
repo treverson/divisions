@@ -14,6 +14,12 @@ module.exports = async (transaction, event, params, message) => {
         return;
     }
     delete out.txHash;
+
+    for(var key in params){
+        if(params[key] === '@any')
+            delete params[key];
+    }
+
     assert.deepEqual(out, params, message);
     transactionListener.dispose();
 }
