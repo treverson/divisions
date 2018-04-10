@@ -1,8 +1,15 @@
 pragma solidity ^0.4.21;
 
+import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../../node_modules/zeppelin-solidity/contracts/payment/PullPayment.sol";
 
+import "../stake/Treasury.sol";
+import "../token/DivisionsToken.sol";
 
-contract AExchange {
+contract AExchange is Ownable, PullPayment {
+    ATreasury public treasury;
+    ADivisionsToken public divToken;
+
     struct Order {
         address sender;
         uint256 amount; 
@@ -40,5 +47,12 @@ contract AExchange {
     
     event SellOrderPlaced(uint256 index);
     event SellOrderFilled(uint256 index, uint256 amountFilled);
+
+    event WeiReserveUpdated(uint256 weiReserve);
+    event DivReserveUpdated(uint256 divReserve);
     
+}
+
+contract Exchange is AExchange {
+
 }

@@ -2,9 +2,9 @@ pragma solidity ^0.4.21;
 
 import "../../../node_modules/zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
-import "../../../node_modules/zeppelin-solidity/contracts/ownership/Claimable.sol";
+import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract ADivisionsToken is StandardToken, Claimable {
+contract ADivisionsToken is StandardToken, Ownable {
     address public minter;
 
     string public symbol;
