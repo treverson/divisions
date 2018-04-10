@@ -64,3 +64,6 @@ typings/
 # truffle output folder
 build/
 bin/
+
+# migrations output
+**/addresses*.json
