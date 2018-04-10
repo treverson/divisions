@@ -10,7 +10,7 @@ contract('DivisionsToken', async accounts => {
     let divisionsToken;
 
     before(async () => {
-        divisionsToken = await DivisionsToken.new(minter);
+        divisionsToken = await DivisionsToken.new();
     });
 
     beforeEach(async () => {

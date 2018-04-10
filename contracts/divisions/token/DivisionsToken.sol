@@ -11,7 +11,7 @@ contract ADivisionsToken is StandardToken, Ownable {
     string public name;
     uint8 public decimals;
 
-    function mint(address _to, uint256 _amount) public returns(bool);
+    function mint(address _to, uint256 _amount) public;
     function burn(uint256 _amount) public;
     function transferMintership(address _minter) onlyOwner public;
 
@@ -24,18 +24,17 @@ contract ADivisionsToken is StandardToken, Ownable {
 contract DivisionsToken is ADivisionsToken {
     using SafeMath for uint256;
 
-    function DivisionsToken(address _minter) public {
+    function DivisionsToken() public {
         symbol = "DIV";
         name = "Divisions";
         decimals = 18;
-        transferMintership(_minter);
     }
 
     // Accept no ether payments
     function() public {
     }
 
-    function mint(address _to, uint256 _amount) onlyMinter public returns(bool) {
+    function mint(address _to, uint256 _amount) onlyMinter public {
         require(_amount > 0);
         require(_to != address(0));
         
@@ -62,7 +61,6 @@ contract DivisionsToken is ADivisionsToken {
         emit MintershipTransferred(minter, _minter);
         
         minter = _minter;
-        
     }
 
     modifier onlyMinter() {
