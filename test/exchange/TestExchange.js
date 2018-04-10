@@ -149,32 +149,108 @@ contract('Exchange', async acounts => {
         let buyer = accounts[1]
         let buyAmount = web3.toWei(4, 'ether');
         try {
-            let out = await transactionListener.listen(
+            let buyOrderIndex = (await transactionListener.listen(
                 exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
                 exchange.BuyOrderPlaced()
-            );
+            )).index;
         } finally {
             transactionListener.dispose();
         }
 
+        await exchange.fillBuyOrder(buyOrderIndex);
 
+        let buyOrder = new Order(await exchange.getBuyOrder(buyOrderIndex));
 
+        assert.equal(
+            buyOrder.amountFilled.valueOf(),
+            buyAmount.valueOf(),
+            "The order was not fully filled"
+        );
     });
 
-    it('logs an event on fillBuyOrder()', async () => {
+    it('logs an event on fillBuyOrder', async () => {
+        let seller = accounts[2];
+        let sellAmount = web3.toBigNumber(100 * 10 ** 18);
+        await divToken.mint(seller, sellAmount);
+        await divToken.approve(exchange.address, sellAmount, { from: seller });
+        await exchange.placeSellOrder(sellAmount, { from: seller });
 
+        let buyer = accounts[1]
+        let buyAmount = web3.toWei(4, 'ether');
+        try {
+            let buyOrderIndex = (await transactionListener.listen(
+                exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
+                exchange.BuyOrderPlaced()
+            )).index;
+        } finally {
+            transactionListener.dispose();
+        }
+
+        await expectEvent(
+            exchange.fillBuyOrder.sendTransaction(buyOrderIndex),
+            exchange.BuyOrderFilled(),
+            { index: buyOrderIndex, amountFilled: buyAmount }
+        );
     });
 
     it('fills sell orders', async () => {
+        let buyer = accounts[2]
+        let buyAmount = web3.toWei(20, 'ether');
+        await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
 
+        let seller = accounts[1];
+        let sellAmount = web3.toBigNumber(1 * 10 ** 18);
+        await divToken.mint(seller, sellAmount);
+        await divToken.approve(exchange.address, sellAmount, { from: seller });
+
+        try {
+            let sellOrderIndex = (await transactionListener.listen(
+                exchange.placeSellOrder.sendTransaction(sellAmount, {from: seller }),
+                exchange.SellOrderPlaced()
+            )).index;
+        } finally {
+            transactionListener.dispose();
+        }
+
+        await exchange.fillSellOrder(sellOrderIndex);
+
+        let sellOrder = new Order(await exchange.getSellOrder(sellOrderIndex));
+
+        assert.equal(
+            sellOrder.amountFilled.valueOf(),
+            sellAmount.valueOf(),
+            "The order was not fully filled"
+        );
     });
 
     it('logs an event on fillSellOrder()', async () => {
+        let buyer = accounts[2]
+        let buyAmount = web3.toWei(20, 'ether');
+        await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
 
+        let seller = accounts[2];
+        let sellAmount = web3.toBigNumber(100 * 10 ** 18);
+        await divToken.mint(seller, sellAmount);
+        await divToken.approve(exchange.address, sellAmount, { from: seller });
+
+        try {
+            let sellOrderIndex = (await transactionListener.listen(
+                exchange.placeSellOrder.sendTransaction(sellAmount, {from: seller }),
+                exchange.SellOrderPlaced()
+            )).index;
+        } finally {
+            transactionListener.dispose();
+        }
+
+        await expectEvent(
+            exchange.fillSellOrder.sendTransaction(sellOrderIndex),
+            exchange.SellOrderFilled(),
+            { index: sellOrderIndex, amountFilled: sellAmount }
+        );
     });
 
     it('calculates the price of tokens', async () => {
-
+        
     });
 
     it('converts wei amounts to token', async () => {
