@@ -6,14 +6,17 @@ let transactionListener = new TransactionListener();
 
 const Exchange = artifacts.require('Exchange');
 const MockDivisionsToken = artifacts.require('MockDivisionsToken');
+const MockStakeManager = artifacts.require('MockStakeManager');
 
-contract('Exchange', async acounts => {
+contract('Exchange', async accounts => {
     let exchange;
     let divToken;
+    let stakeManager;
 
     before(async () => {
         divToken = await MockDivisionsToken.new();
-        exchange = await Exchange.new(divToken.address);
+        stakeManager = await MockStakeManager.new();
+        exchange = await Exchange.new(divToken.address, stakeManager.address);
     });
 
     it('calculates the div reserve', async () => {

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.21;
 
 import "../../divisions/stake/Treasury.sol";
 import "../../divisions/stake/StakeManager.sol";
@@ -19,7 +19,9 @@ contract MockStakeManager is AStakeManager {
 
     }
     
-    function setLogoutMessage(AWithdrawalBox _withdrawalBox, bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external;
+    function setLogoutMessage(AWithdrawalBox _withdrawalBox, bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external {
+        
+    }
     
     function vote(
         bytes _voteMessage,

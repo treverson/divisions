@@ -11,10 +11,15 @@
     "zeppelin-solidity": "^1.8.0"
   },
   "devDependencies": {
+    "solidity-coverage": "^0.4.15",
     "truffle": "^4.1.5"
   },
   "scripts": {
-    "start-truffle": "node node_modules/truffle/build/cli.bundled.js develop --log"
+    "start": "truffle develop",
+    "migrate": "truffle migrate --reset",
+    "test" : "truffle test",
+    "coverage" : "solidity-coverage",
+    "compile" : "truffle compile"
   },
   "repository": {
     "type": "git",

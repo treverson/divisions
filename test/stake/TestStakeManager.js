@@ -8,9 +8,9 @@ const AWithdrawalBox = artifacts.require('AWithdrawalBox');
 const MockTreasury = artifacts.require('MockTreasury');
 const MockCasper = artifacts.require('MockCasper');
 
-const minDepositSize = web3.toWei(1, 'ether');
-const epochLength = 20;
-const epochsBeforeLogout = 10;
+const MIN_DEPOSIT_SIZE = web3.toWei(1, 'ether');
+const EPOCH_LENGTH = 20;
+const EPOCH_BEFORE_LOGOUT = 10;
 
 contract('StakeManager', async accounts => {
     let casper;
@@ -21,7 +21,7 @@ contract('StakeManager', async accounts => {
     before(async () => {
         validator = accounts[9];
 
-        casper = await MockCasper.new(minDepositSize, epochLength);
+        casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH);
 
         treasury = await MockTreasury.new(casper.address);
 
@@ -29,7 +29,7 @@ contract('StakeManager', async accounts => {
             casper.address,
             validator,
             treasury.address,
-            epochsBeforeLogout
+            EPOCH_BEFORE_LOGOUT
         );
 
         await treasury.transferTreasurership(stakeManager.address);
@@ -118,13 +118,13 @@ contract('StakeManager', async accounts => {
         let logoutEpoch = await stakeManager.logoutEpoch();
         assert.equal(
             logoutEpoch.valueOf(),
-            currentEpoch.plus(epochsBeforeLogout).valueOf(),
-            "The epic at which a logout can be made, should equal currentEpoch (" + currentEpoch.valueOf() +") + epochsbeforeLogout (" + epochsBeforeLogout + ")"
+            currentEpoch.plus(EPOCH_BEFORE_LOGOUT).valueOf(),
+            "The epic at which a logout can be made, should equal currentEpoch (" + currentEpoch.valueOf() +") + EPOCH_BEFORE_LOGOUT (" + EPOCH_BEFORE_LOGOUT + ")"
         );
     })
 
     it('makes casper deposits', async () => {
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[8] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[8] });
 
         let numWithdrawalBoxesBefore = await stakeManager.withdrawalBoxesCount();
         let stakeAmount = await stakeManager.getStakeAmount();
@@ -149,7 +149,7 @@ contract('StakeManager', async accounts => {
     });
 
     it('logs an event on makeStakeDeposit', async () => {
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[7] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
 
         let nextValidatorIndex = await casper.next_validator_index();
 
@@ -163,7 +163,7 @@ contract('StakeManager', async accounts => {
     });
 
     it('forwards votes to casper and stores them alongside their unencoded parameters', async () => {
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[7] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
 
         await stakeManager.makeStakeDeposit();
 
@@ -199,7 +199,7 @@ contract('StakeManager', async accounts => {
     });
 
     it('only lets the validator cast votes', async () => {
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[4] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[4] });
 
         await stakeManager.makeStakeDeposit();
 
@@ -227,7 +227,7 @@ contract('StakeManager', async accounts => {
     });
 
     it('logs an event on vote', async () => {
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[7] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
 
         await stakeManager.makeStakeDeposit();
 
@@ -263,7 +263,7 @@ contract('StakeManager', async accounts => {
     });
 
     it('sets logout messages at given WithdrawalBoxes', async () => {
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[6] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
 
@@ -295,7 +295,7 @@ contract('StakeManager', async accounts => {
 
     it('only lets the validator set logout messages', async () => {
 
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[6] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
 
@@ -320,7 +320,7 @@ contract('StakeManager', async accounts => {
     });
 
     it('logs an event on setLogoutMessage', async () => {
-        await treasury.sendTransaction({ value: minDepositSize, from: accounts[6] });
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
 

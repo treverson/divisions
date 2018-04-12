@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.21;
 
 import "../../divisions/stake/ACasper.sol";
 /*  Mock Capser contract. Does not do any checks, 
@@ -45,7 +45,13 @@ contract MockCasper is ACasper {
     }
 
     function withdraw(int128 validator_index) public {
+        Validator storage validator = validators[validator_index];
+        require(validator_indexes[validator.withdrawal_addr] != 0);
+        validator_indexes[validator.withdrawal_addr] = 0;
+
         emit WithdrawCalled(validator_index);
+        
+        validator.addr.transfer(uint256(validator.deposit));
     }
 
     event DepositCalled(address validation_addr, address withdrawal_addr, uint256 amount);

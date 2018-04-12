@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.21;
 
 import "../../divisions/stake/Treasury.sol";
 import "../../divisions/stake/ACasper.sol";
