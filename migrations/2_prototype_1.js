@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const ADDRESS_JSON_PATH = "addresses-p1.json";
+const ADDRESS_JSON_PATH_P1 = "addresses-p1.json";
 
 let MockCasper = artifacts.require('MockCasper');
 let Treasury = artifacts.require('Treasury');
@@ -33,7 +33,7 @@ module.exports = async deployer => {
         };
 
         let addressesJson = JSON.stringify(addresses);
-        fs.writeFileSync(ADDRESS_JSON_PATH, addressesJson);
+        fs.writeFileSync(ADDRESS_JSON_PATH_P1, addressesJson);
     } catch (err) {
         console.log(err);
     }
