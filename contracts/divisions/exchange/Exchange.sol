@@ -19,11 +19,14 @@ contract AExchange is Ownable, PullPayment {
         uint256 amountFilled;
     }
 
+    
     Order[] public buyOrders;
     uint256 public buyOrderCursor;
-
+    mapping(address => uint256[]) buyOrderIndexes;
+    
     Order[] public sellOrders;
     uint256 public sellOrderCursor;
+    mapping(address => uint256[]) sellOrderIndexes;
 
     function buyOrdersLength() public view returns (uint256);
     function sellOrdersLength() public view returns (uint256);
@@ -90,8 +93,11 @@ contract Exchange is AExchange {
             amountFilled: 0
         }));
 
+        buyOrderIndexes[msg.sender].push(buyOrders.length - 1);
+
         emit BuyOrderPlaced(buyOrders.length - 1, msg.sender, msg.value);
     }
+
     function placeSellOrder(uint256 _amount) external {
         require(_amount > 0);
         divToken.transferFrom(msg.sender, address(this), _amount);
@@ -103,19 +109,31 @@ contract Exchange is AExchange {
             amountFilled: 0
         }));
 
+        sellOrderIndexes[msg.sender].push(sellOrders.length - 1);
+
         emit SellOrderPlaced(buyOrders.length - 1, msg.sender, _amount);
     }
 
     function canFillBuyOrderAmount(uint256 _index) public view returns (uint256) {
         return 0;
     }
+
     function canFillSellOrderAmount(uint256 _index) public view returns (uint256) {
         return 0;
+    }
+
+    function getBuyOrderIndexes(address _buyer) public view returns (uint256[]) {
+        return buyOrderIndexes[_buyer];
+    }
+
+    function getSellOrderIndexes(address _seller) public view returns (uint256[]) {
+        return sellOrderIndexes[_seller];
     }
 
     function getBuyOrder(uint256 _index) external view returns (address, uint256, bool, uint256) {
         return (address(0), 0, false, 0);
     }
+
     function getSellOrder(uint256 _index) external view returns (address, uint256, bool, uint256) {
         return (address(0), 0, false, 0);
     }
@@ -123,6 +141,7 @@ contract Exchange is AExchange {
     function fillBuyOrder(uint256 _index) external {
 
     }
+
     function fillSellOrder(uint256 _index) external {
 
     }

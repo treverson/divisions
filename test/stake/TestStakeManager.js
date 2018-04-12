@@ -19,6 +19,8 @@ contract('StakeManager', async accounts => {
     let stakeManager;
 
     before(async () => {
+        console.log(await web3.eth.getBalance(accounts[0]));
+
         validator = accounts[9];
 
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH);
@@ -96,6 +98,13 @@ contract('StakeManager', async accounts => {
         );
     });
 
+    it('keeps track of the amount of ether that is deposited at casper', async () => {
+        let depositedWei = web3.toWei(2, 'ether');
+        let numDeposits = 4;
+        await treasury.sendTransaction({ value: depositedWei * numDeposits, from: accounts[7] });
+
+    });
+
     it('decides how much ether can be staked', async () => {
         let depositedWei = web3.toWei(2, 'ether');
         await treasury.sendTransaction({ value: depositedWei, from: accounts[8] });
@@ -119,7 +128,7 @@ contract('StakeManager', async accounts => {
         assert.equal(
             logoutEpoch.valueOf(),
             currentEpoch.plus(EPOCH_BEFORE_LOGOUT).valueOf(),
-            "The epic at which a logout can be made, should equal currentEpoch (" + currentEpoch.valueOf() +") + EPOCH_BEFORE_LOGOUT (" + EPOCH_BEFORE_LOGOUT + ")"
+            "The epic at which a logout can be made, should equal currentEpoch (" + currentEpoch.valueOf() + ") + EPOCH_BEFORE_LOGOUT (" + EPOCH_BEFORE_LOGOUT + ")"
         );
     })
 

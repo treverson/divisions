@@ -66,6 +66,8 @@ contract('Exchange', async accounts => {
         assert.equal(buyOrder.amount.valueOf(), buyAmount.valueOf(), "The amount was no stored correctly");
         assert.equal(buyOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
 
+
+
         await expectThrow(
             exchange.placeBuyOrder({ from: buyer, value: 0 }),
             "Cannot place buy orders with a 0 amount"

@@ -1,15 +1,15 @@
 const fs = require('fs');
 
-const ADDRESS_JSON_PATH_P1 = "../addresses-p1.json";
+const ADDRESS_JSON_PATH_P1 = "addresses-p1.json";
 const ADDRESS_JSON_PATH_P2 = "addresses-p2.json";
-
-let addressesP1 = JSON.parse(fs.readFileSync(ADDRESS_JSON_PATH_P1));
 
 let DivisionsToken = artifacts.require('DivisionsToken');
 let Exchange = artifacts.require('Exchange');
 
 module.exports = async deployer => {
     try {
+        let addressesP1 = JSON.parse(fs.readFileSync(ADDRESS_JSON_PATH_P1));
+
         await deployer.deploy(DivisionsToken);
         await deployer.deploy(Exchange, DivisionsToken.address, addressesP1.stakeManager);
 

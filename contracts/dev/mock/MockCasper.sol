@@ -12,8 +12,12 @@ contract MockCasper is ACasper {
     bytes32 public invalid_vote_message_hash = keccak256(invalid_vote_message_hash);
 
     function MockCasper(int128 _min_deposit_size, int128 _epoch_length) public {
+        // current_epoch = int128(block.number) / epoch_length;
+
         min_deposit_size = _min_deposit_size;
         epoch_length = _epoch_length;
+        
+        deposit_scale_factor[uint256(current_epoch)] = 10000000000;
     }
 
     function deposit(address validation_addr, address withdrawal_addr) public payable {
@@ -23,7 +27,7 @@ contract MockCasper is ACasper {
 
         validator_indexes[withdrawal_addr] = next_validator_index;
         validators[next_validator_index] = Validator({
-            deposit: int128(msg.value),
+            deposit: int128(msg.value) / deposit_scale_factor[uint256(current_epoch)],
             start_dynasty: start_dynasty,
             end_dynasty: default_end_dynasty,
             addr: validation_addr,
@@ -52,6 +56,11 @@ contract MockCasper is ACasper {
         emit WithdrawCalled(validator_index);
         
         validator.addr.transfer(uint256(validator.deposit));
+    }
+
+    function deposit_size(int128 validator_index) public view returns (int128) {
+        Validator storage validator = validators[validator_index];
+        return int128(validator.deposit * deposit_scale_factor[uint256(current_epoch)]);
     }
 
     event DepositCalled(address validation_addr, address withdrawal_addr, uint256 amount);
