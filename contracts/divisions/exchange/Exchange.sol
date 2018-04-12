@@ -40,8 +40,8 @@ contract AExchange is Ownable, PullPayment {
     function canFillBuyOrderAmount(uint256 _index) public view returns (uint256);
     function canFillSellOrderAmount(uint256 _index) public view returns (uint256);
 
-    function getBuyOrder(uint256 _index) external view returns (address, uint256, bool, uint256);
-    function getSellOrder(uint256 _index) external view returns (address, uint256, bool, uint256);
+    function getBuyOrder(uint256 _index) external view returns (address, uint256, uint256, uint256);
+    function getSellOrder(uint256 _index) external view returns (address, uint256, uint256, uint256);
 
     function fillBuyOrder(uint256 _index) external;
     function fillSellOrder(uint256 _index) external;
@@ -130,12 +130,14 @@ contract Exchange is AExchange {
         return sellOrderIndexes[_seller];
     }
 
-    function getBuyOrder(uint256 _index) external view returns (address, uint256, bool, uint256) {
-        return (address(0), 0, false, 0);
+    function getBuyOrder(uint256 _index) external view returns (address, uint256, uint256, uint256) {
+        Order storage buyOrder = buyOrders[_index];
+        return (buyOrder.sender, buyOrder.amount, buyOrder.cumulativeAmount, buyOrder.amountFilled);
     }
 
-    function getSellOrder(uint256 _index) external view returns (address, uint256, bool, uint256) {
-        return (address(0), 0, false, 0);
+    function getSellOrder(uint256 _index) external view returns (address, uint256, uint256, uint256) {
+        Order storage sellOrder = sellOrders[_index];
+        return (sellOrder.sender, sellOrder.amount, sellOrder.cumulativeAmount, sellOrder.amountFilled);
     }
 
     function fillBuyOrder(uint256 _index) external {
@@ -147,7 +149,7 @@ contract Exchange is AExchange {
     }
 
     function divPrice() public view returns (uint256) { //Price of 10**18 DIV in Wei
-
+        return 10 ** 18;
     }
 
     function toDiv(uint256 _weiAmount) public view returns (uint256) {

@@ -50,14 +50,29 @@ contract('Exchange', async accounts => {
         let buyAmount = web3.toWei(2, 'ether');
 
         let buyOrdersLengthBefore = await exchange.buyOrdersLength();
-
+        let buyOrderIndexesBefore = await exchange.getBuyOrderIndexes(buyer);
+        
         await exchange.placeBuyOrder({ from: buyer, value: buyAmount });
 
         let buyOrdersLengthAfter = await exchange.buyOrdersLength();
+        let buyOrderIndexesAfter = await exchange.getBuyOrderIndexes(buyer);
+
         assert.equal(
             buyOrdersLengthAfter.valueOf(),
             buyOrdersLengthBefore.plus(1).valueOf(),
             "The number of buy orders was not incremented"
+        );
+
+        assert.equal(
+            buyOrderIndexesAfter.length,
+            buyOrderIndexesBefore.length + 1,
+            "The buy order index was not stored"
+        );
+
+        assert.equal(
+            buyOrderIndexesAfter[buyOrderIndexesAfter.length - 1].valueOf(),
+            buyOrdersLengthAfter.minus(1).valueOf(),
+            "The stored index was not correct"
         );
 
         let buyOrder = new Order(await exchange.buyOrders(buyOrdersLengthAfter.minus(1)));
@@ -65,8 +80,6 @@ contract('Exchange', async accounts => {
         assert.equal(buyOrder.sender, buyer, "The sender of the order was not stored correctly");
         assert.equal(buyOrder.amount.valueOf(), buyAmount.valueOf(), "The amount was no stored correctly");
         assert.equal(buyOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
-
-
 
         await expectThrow(
             exchange.placeBuyOrder({ from: buyer, value: 0 }),
@@ -95,15 +108,29 @@ contract('Exchange', async accounts => {
         await divToken.approve(exchange.address, sellAmount, { from: seller });
 
         let sellOrdersLengthBefore = await exchange.sellOrdersLength();
+        let sellOrderIndexesBefore = await exchange.getSellOrderIndexes(seller);
 
         await exchange.placeSellOrder(sellAmount, { from: seller });
 
         let sellOrdersLengthAfter = await exchange.sellOrdersLength();
+        let sellOrderIndexesAfter = await exchange.getSellOrderIndexes(seller);
 
         assert.equal(
             sellOrdersLengthAfter.valueOf(),
-            sellOrdersLengthBefore.plus(1).valueOf,
+            sellOrdersLengthBefore.plus(1).valueOf(),
             "The number of sell orders was not incremented"
+        );
+
+        assert.equal(
+            sellOrderIndexesAfter.length,
+            sellOrderIndexesBefore.length + 1,
+            "The sell order index was not stored"
+        );
+
+        assert.equal(
+            sellOrderIndexesAfter[sellOrderIndexesAfter.length - 1].valueOf(),
+            sellOrdersLengthAfter.minus(1).valueOf(),
+            "The stored index was not correct"
         );
 
         let sellOrder = new Order(await exchange.getSellOrder(sellOrdersLengthAfter.minus(1)));
@@ -115,7 +142,7 @@ contract('Exchange', async accounts => {
         await divToken.mint(seller, 100);
         await divToken.approve(exchange.address, 100);
         await expectThrow(
-            exchange.placeSellOrder({ from: seller, value: 0 }),
+            exchange.placeSellOrder(0, { from: seller }),
             "Cannot place sell orders with a 0 amount"
         );
     });
@@ -130,7 +157,7 @@ contract('Exchange', async accounts => {
         let sellOrdersLength = await exchange.sellOrdersLength();
 
         await expectEvent(
-            exchange.placeBuyOrder.sendTransaction(sellAmount, { from: seller }),
+            exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
             exchange.BuyOrderPlaced(),
             { index: sellOrdersLength, sender: seller, amount: sellAmount }
         );
@@ -210,7 +237,7 @@ contract('Exchange', async accounts => {
 
         try {
             let sellOrderIndex = (await transactionListener.listen(
-                exchange.placeSellOrder.sendTransaction(sellAmount, {from: seller }),
+                exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
                 exchange.SellOrderPlaced()
             )).index;
         } finally {
@@ -218,7 +245,7 @@ contract('Exchange', async accounts => {
         }
 
         await exchange.fillSellOrder(sellOrderIndex);
-
+        let sellOrderArray = await exchange.getSellOrder(sellOrderIndex);
         let sellOrder = new Order(await exchange.getSellOrder(sellOrderIndex));
 
         assert.equal(
@@ -240,7 +267,7 @@ contract('Exchange', async accounts => {
 
         try {
             let sellOrderIndex = (await transactionListener.listen(
-                exchange.placeSellOrder.sendTransaction(sellAmount, {from: seller }),
+                exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
                 exchange.SellOrderPlaced()
             )).index;
         } finally {
@@ -255,7 +282,7 @@ contract('Exchange', async accounts => {
     });
 
     it('calculates the price of tokens', async () => {
-        
+
     });
 
     it('converts wei amounts to token', async () => {
