@@ -104,10 +104,10 @@ contract Treasury is ATreasury {
 
         uint256 depositScaleFactor = uint256(casper.deposit_scale_factor(casper.current_epoch()));
         uint256 totalScaledDeposit = 0;
-        
+        // Can we remove this loop somehow?
         for(uint256 i = 0; i < stakeManager.withdrawalBoxesLength(); i ++) {
             AWithdrawalBox withdrawalBox = stakeManager.withdrawalBoxes(i);
-            if(withdrawalBox.logoutEpoch() == 0) continue;
+            if(withdrawalBox.logoutEpoch() != 0) continue;
         
             int128 validatorIndex = casper.validator_indexes(address(withdrawalBox));
             int128 scaledDeposit;
@@ -115,7 +115,7 @@ contract Treasury is ATreasury {
         
             totalScaledDeposit += uint256(scaledDeposit);
         }
-        
+
         size += totalScaledDeposit * depositScaleFactor;
 
         return size += totalLoggedOutDeposit;

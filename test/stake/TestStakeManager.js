@@ -119,7 +119,7 @@ contract('StakeManager', async accounts => {
     it('makes casper deposits', async () => {
         await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[8] });
 
-        let numWithdrawalBoxesBefore = await stakeManager.withdrawalBoxesCount();
+        let numWithdrawalBoxesBefore = await stakeManager.withdrawalBoxesLength();
 
         let stakeAmount = await stakeManager.getStakeAmount();
 
@@ -133,7 +133,7 @@ contract('StakeManager', async accounts => {
             }
         );
 
-        let numWithdrawalBoxesAfter = await stakeManager.withdrawalBoxesCount();
+        let numWithdrawalBoxesAfter = await stakeManager.withdrawalBoxesLength();
 
         assert.deepEqual(
             numWithdrawalBoxesAfter,
@@ -161,7 +161,7 @@ contract('StakeManager', async accounts => {
 
         await stakeManager.makeStakeDeposit();
 
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
         let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
@@ -203,7 +203,7 @@ contract('StakeManager', async accounts => {
 
         await stakeManager.makeStakeDeposit();
 
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
         let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
@@ -231,7 +231,7 @@ contract('StakeManager', async accounts => {
 
         await stakeManager.makeStakeDeposit();
 
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
         let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
@@ -267,7 +267,7 @@ contract('StakeManager', async accounts => {
 
         await stakeManager.makeStakeDeposit();
 
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
         let logoutMessageRLP = web3.toHex("iwannalogout");
@@ -305,7 +305,7 @@ contract('StakeManager', async accounts => {
 
         await stakeManager.makeStakeDeposit();
 
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
         let invalidLogoutMessageRLP = "invalidlogout";
@@ -330,7 +330,7 @@ contract('StakeManager', async accounts => {
 
         await stakeManager.makeStakeDeposit();
 
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
         let logoutMessageRLP = web3.toHex("iwannalogout");
@@ -359,7 +359,7 @@ contract('StakeManager', async accounts => {
 
         await stakeManager.makeStakeDeposit();
 
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
         let logoutMessageRLP = web3.toHex("iwannalogout");

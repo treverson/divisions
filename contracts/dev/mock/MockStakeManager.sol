@@ -2,6 +2,8 @@ pragma solidity 0.4.21;
 
 import "../../divisions/stake/StakeManager.sol";
 
+import "./MockWithdrawalBox.sol";
+
 contract MockStakeManager is AStakeManager {
     
     function MockStakeManager(ACasper _casper, ATreasury _treasury) public {
@@ -21,11 +23,19 @@ contract MockStakeManager is AStakeManager {
 
     }
 
-    function getStakeAmount() public view returns (uint256){ 
-
+    function getStakeAmount() public view returns (uint256 amount){ 
+        return amount =  address(treasury).balance;
     }
     function makeStakeDeposit() external{
+        AWithdrawalBox withdrawalBox = new MockWithdrawalBox();
+        
+        uint256 depositSize = getStakeAmount();
 
+        treasury.stake(depositSize, validator, withdrawalBox);
+
+        withdrawalBoxes.push(withdrawalBox);
+
+        emit WithdrawalBoxDeployed(withdrawalBox);
     }
     
     function setLogoutMessage(AWithdrawalBox _withdrawalBox, bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external {

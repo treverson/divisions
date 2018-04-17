@@ -250,12 +250,44 @@ contract('Treasury', async accounts => {
     });
 
     it('gets the total pool size in ether', async () => {
-        let mockStakeManager = await MockStakeManager.new(casper.address, treasury.address);
-        await treasury.setStakeManager(mockStakeManager.address);
-        
-        let total = await treasury.getTotalPoolSize();
+        let stakeManager = await MockStakeManager.new(casper.address, treasury.address);
+        await treasury.setStakeManager(stakeManager.address);
 
-        console.log(total.valueOf());
+        for (let i = 0; i < 20; i++) {
+            await treasury.sendTransaction({ value: web3.toWei(i % 5, 'ether'), from: accounts[i % 5] });
+            await stakeManager.makeStakeDeposit();
+        }
+
+        let treasuryBalance = await web3.eth.getBalance(treasury.address);
+
+        let depositScaleFactor = await casper.deposit_scale_factor(await casper.current_epoch());
+        let totalScaledDeposit = web3.toBigNumber(0);
+
+        let withdrawalBoxesLength = await stakeManager.withdrawalBoxesLength();
+        for (let i = 0; i < withdrawalBoxesLength.toNumber(); i++) {
+            let withdrawalBox = MockWithdrawalBox.at(await stakeManager.withdrawalBoxes(i));
+            let logoutEpoch = await withdrawalBox.logoutEpoch();
+            if (logoutEpoch.valueOf() != 0) continue;
+
+            let validatorIndex = await casper.validator_indexes(withdrawalBox.address);
+            let validator = new Validator(await casper.validators(validatorIndex));
+            totalScaledDeposit = totalScaledDeposit.plus(validator.deposit);
+        }
+
+        let totalLoggedOutDeposit = await treasury.totalLoggedOutDeposit();
+
+        let expectedTotalPoolSize = treasuryBalance
+            .plus(totalLoggedOutDeposit)
+            .plus(totalScaledDeposit
+                .times(depositScaleFactor)
+            );
+        let actualTotalPoolSize = await treasury.getTotalPoolSize();
+
+        assert.deepEqual(
+            actualTotalPoolSize,
+            expectedTotalPoolSize,
+            "The total pool size was not correct"
+        );
     });
 });
 

@@ -39,7 +39,7 @@ contract AStakeManager is Ownable {
     function transferValidatorship(address _validator) external onlyOwner();
     function setTreasury(ATreasury _treasury) external onlyOwner();
 
-    function getStakeAmount() public view returns (uint256);
+    function getStakeAmount() public view returns (uint256 amount);
     function makeStakeDeposit() external;
     
     function vote(
@@ -112,14 +112,14 @@ contract StakeManager is AStakeManager {
         treasury = _treasury;
     }
 
-    function getStakeAmount() public view returns (uint256) {
+    function getStakeAmount() public view returns (uint256 amount) {
         // TODO implement actual calculation
-        return address(treasury).balance;
+        return amount = address(treasury).balance;
     }
 
     function makeStakeDeposit() external {
         // TODO have the exchange deposit ether in the treasury
-        WithdrawalBox withdrawalBox = new WithdrawalBox(treasury);
+        AWithdrawalBox withdrawalBox = new WithdrawalBox(treasury);
         
         uint256 depositSize = getStakeAmount();
 
