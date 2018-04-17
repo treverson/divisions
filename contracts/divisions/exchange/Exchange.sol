@@ -6,8 +6,9 @@ import "../../../node_modules/zeppelin-solidity/contracts/payment/PullPayment.so
 import "../stake/Treasury.sol";
 import "../stake/StakeManager.sol";
 import "../token/DivisionsToken.sol";
+import "../token/ITokenRecipient.sol";
 
-contract AExchange is Ownable, PullPayment {
+contract AExchange is Ownable, PullPayment, ITokenRecipient {
     ATreasury public treasury;
     ADivisionsToken public divToken;
     AStakeManager public stakeManager;
@@ -68,6 +69,10 @@ contract Exchange is AExchange {
     function Exchange(ADivisionsToken _divToken, AStakeManager _stakeManager) public {
         divToken = _divToken;
         stakeManager = _stakeManager;
+    }
+
+    function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
+        //TODO
     }
 
     function buyOrdersLength() public view returns (uint256) {

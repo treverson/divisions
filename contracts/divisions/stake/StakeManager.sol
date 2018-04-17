@@ -8,15 +8,7 @@ import "./WithdrawalBox.sol";
 import "./ACasper.sol";
 
 contract AStakeManager is Ownable {
-    uint8 public epochsBeforeLogout;
-
-    address public validator;
-    ACasper public casper;
-    ATreasury public treasury;
-
-    mapping(uint256 => mapping(uint256 => VoteMessage)) votes;
-    AWithdrawalBox[] public withdrawalBoxes;
-
+    
     struct VoteMessage {
         bytes messageRLP;
         bytes32 targetHash;
@@ -24,14 +16,29 @@ contract AStakeManager is Ownable {
         uint256 sourceEpoch;
         uint256 castAt;
     }
-    
+
+    struct LogoutMessage {
+        bytes messageRLP;
+        uint256 validatorIndex;
+        uint256 epoch;
+        uint256 setAt;
+    }
+
+    uint8 public epochsBeforeLogout;
+
+    address public validator;
+    ACasper public casper;
+    ATreasury public treasury;
+
+    mapping(uint256 => mapping(uint256 => VoteMessage)) votes;
+    mapping(address => LogoutMessage) public logoutMessages;
+    AWithdrawalBox[] public withdrawalBoxes;
+
     function transferValidatorship(address _validator) external onlyOwner();
     function setTreasury(ATreasury _treasury) external onlyOwner();
 
     function getStakeAmount() public view returns (uint256);
     function makeStakeDeposit() external;
-    
-    function setLogoutMessage(AWithdrawalBox _withdrawalBox, bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external;
     
     function vote(
         bytes _voteMessage,
@@ -39,7 +46,7 @@ contract AStakeManager is Ownable {
         bytes32 _targetHash,
         uint256 _targetEpoch,
         uint256 _sourceEpoch
-        )
+    )
         external;
 
     function getVoteMessage(uint256 _validatorIndex, uint256 _targetEpoch)
@@ -53,13 +60,21 @@ contract AStakeManager is Ownable {
             uint256
         );
 
+    function logout(
+        AWithdrawalBox _withdrawalBox,
+        bytes _messageRLP,
+        uint256 _validatorIndex,
+        uint256 _epoch
+    )
+        external;
+
     function withdrawalBoxesCount() external view returns (uint256);
 
     event ValidatorshipTransferred(address indexed oldValidator, address indexed newValidator);
     event TreasurySet(address indexed oldTreasury, address indexed newTreasury);
     event WithdrawalBoxDeployed(AWithdrawalBox indexed withdrawalBox);
     event VoteCast(bytes messageRLP, uint256 validatorIndex, bytes32 targetHash, uint256 targetEpoch, uint256 sourceEpoch);
-    event LogoutMessageSet(AWithdrawalBox indexed withdrawalBox, bytes messageRLP, uint256 validatorIndex, uint256 epoch);
+    event Logout(AWithdrawalBox indexed withdrawalBox, bytes messageRLP, uint256 validatorIndex, uint256 epoch);
 }
 
 contract StakeManager is AStakeManager {
@@ -73,6 +88,7 @@ contract StakeManager is AStakeManager {
     ) 
         public 
     {
+        
         casper = _casper;
         validator = _validator;
         treasury = _treasury;
@@ -96,14 +112,9 @@ contract StakeManager is AStakeManager {
         return address(treasury).balance;
     }
 
-    function logoutEpoch() public view returns (uint256) {
-        uint256 currentEpoch = uint256(casper.current_epoch());
-        return currentEpoch.add(uint256(epochsBeforeLogout));
-    }
-
     function makeStakeDeposit() external {
         // TODO have the exchange deposit ether in the treasury
-        WithdrawalBox withdrawalBox = new WithdrawalBox(logoutEpoch(), treasury);
+        WithdrawalBox withdrawalBox = new WithdrawalBox(treasury);
         
         uint256 depositSize = getStakeAmount();
 
@@ -112,19 +123,6 @@ contract StakeManager is AStakeManager {
         withdrawalBoxes.push(withdrawalBox);
 
         emit WithdrawalBoxDeployed(withdrawalBox);
-    }
-    
-    function setLogoutMessage(
-        AWithdrawalBox _withdrawalBox,
-        bytes _messageRLP,
-        uint256 _validatorIndex,
-        uint256 _epoch
-    )
-    external 
-    onlyValidator
-    {
-        _withdrawalBox.setLogoutMessage(_messageRLP, _validatorIndex, _epoch);
-        emit LogoutMessageSet(_withdrawalBox, _messageRLP, _validatorIndex, _epoch);
     }
     
     function vote(
@@ -137,7 +135,8 @@ contract StakeManager is AStakeManager {
         external
         onlyValidator
     {
-        casper.vote(_messageRLP);
+        // address(casper).call(bytes4(keccak256("vote(bytes)")));
+        casper.vote(_messageRLP);//TODO do this even if it went wrong
         votes[_validatorIndex][_targetEpoch] = VoteMessage({
             messageRLP: _messageRLP,
             targetHash: _targetHash,
@@ -169,7 +168,27 @@ contract StakeManager is AStakeManager {
             voteMsg.castAt
         );
     }
+
+    function logout(
+        AWithdrawalBox _withdrawalBox,
+        bytes _messageRLP,
+        uint256 _validatorIndex,
+        uint256 _epoch
+    ) external {
         
+        logoutMessages[_withdrawalBox] = LogoutMessage({
+            messageRLP: _messageRLP,
+            validatorIndex: _validatorIndex,
+            epoch: _epoch,
+            setAt: block.number
+        });
+
+        casper.logout(_messageRLP);
+        treasury.onLogout(_withdrawalBox);
+
+        emit Logout(_withdrawalBox, _messageRLP, _validatorIndex, _epoch);
+    }
+
     function withdrawalBoxesCount() external view returns (uint256){
         return withdrawalBoxes.length;
     }

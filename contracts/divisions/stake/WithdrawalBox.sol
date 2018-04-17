@@ -1,62 +1,56 @@
 pragma solidity 0.4.21;
 
+import "./StakeManager.sol";
+import "./Treasury.sol";
+
 contract AWithdrawalBox {
    
     uint256 public deployedAt;
-    address public stakeManager;
-    address public recipient;
+    ATreasury public treasury;
+    
     uint256 public logoutEpoch;
-    LogoutMessage public logoutMessage;
 
-    struct LogoutMessage {
-        bytes messageRLP;
-        uint256 validatorIndex;
-        uint256 epoch;
-    }
+    AStakeManager public stakeManager;
 
     function sweep() external;
-    function setLogoutMessage(bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external;
+    function setLogoutEpoch(uint256 _logoutEpoch) external;
 
     event EtherReceived(uint256 amount);
     event Sweep(uint256 amount);
-    event LogoutMessageSet(bytes messageRLP, uint256 indexed validatorIndex, uint256 epoch);
 }
 
 contract WithdrawalBox is AWithdrawalBox {
 
-    function WithdrawalBox(uint256 _logoutEpoch, address _recipient) public {
-        require(_recipient != msg.sender);
+    function WithdrawalBox(ATreasury _treasury) public {
+        require(_treasury != msg.sender);
 
-        logoutEpoch = _logoutEpoch;
         deployedAt = block.number;
-        recipient = _recipient;
-        stakeManager = msg.sender;
+        treasury = _treasury;
+
+        stakeManager = StakeManager(msg.sender);
+    }
+
+    function setLogoutEpoch(uint256 _logoutEpoch) external onlyStakeManager {
+        logoutEpoch = _logoutEpoch;
     }
 
     function() public payable {
         emit EtherReceived(msg.value);
     }
 
-    function sweep() external {
+    function sweep() external onlyTreasury {
         uint256 balance = address(this).balance;
-        recipient.transfer(balance);
+        address(treasury).transfer(balance);
         emit Sweep(balance);
     }
-    
-    function setLogoutMessage(bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external onlyStakeManager {
-        logoutMessage = LogoutMessage({
-            messageRLP: _messageRLP,
-            validatorIndex: _validatorIndex,
-            epoch: _epoch
-        });
 
-        emit LogoutMessageSet(_messageRLP, _validatorIndex, _epoch);
-    }
-
-    modifier onlyStakeManager {
-        require(msg.sender == stakeManager);
+    modifier onlyStakeManager() {
+        require(msg.sender == address(stakeManager));
         _;
     }
 
-    
+    modifier onlyTreasury() {
+        require(msg.sender == address(treasury));
+        _;
+    }
 }

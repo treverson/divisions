@@ -4,6 +4,8 @@ import "../../../node_modules/zeppelin-solidity/contracts/token/ERC20/StandardTo
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
 
+import "./ITokenRecipient.sol";
+
 contract ADivisionsToken is StandardToken, Ownable {
     address public minter;
 
@@ -15,6 +17,8 @@ contract ADivisionsToken is StandardToken, Ownable {
     function burn(uint256 _amount) public;
     function transferMintership(address _minter) onlyOwner public;
 
+    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool);
+    
     event Burn(uint256 amount);
     event Mint(address recipient, uint256 amount);
     event MintershipTransferred(address indexed oldMinter, address indexed newMinter);
@@ -61,6 +65,12 @@ contract DivisionsToken is ADivisionsToken {
         emit MintershipTransferred(minter, _minter);
         
         minter = _minter;
+    }
+
+    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool) {
+        approve(_spender, _value);
+        _spender.receiveApproval(msg.sender, _value, address(this), _extraData);
+        return true;
     }
 
     modifier onlyMinter() {

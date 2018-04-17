@@ -22,7 +22,7 @@ contract ACasper {
 
     int128 public dynasty = 0;
 
-    mapping(uint256 => int128) public deposit_scale_factor;
+    mapping(int128 => int128) public deposit_scale_factor;
 
     mapping(int128 => Validator) public validators;
 
@@ -34,6 +34,8 @@ contract ACasper {
     function deposit(address validation_addr, address withdrawal_addr) public payable;
 
     function vote(bytes vote_msg) public;
+
+    function logout(bytes logout_msg) public;
 
     function deposit_size(int128 validator_index) public view returns (int128);
 

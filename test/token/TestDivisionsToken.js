@@ -4,13 +4,16 @@ const expectEvent = require("../../test-helpers/expectEvent");
 // ============ Test DivisionsToken ============ //
 
 const DivisionsToken = artifacts.require('DivisionsToken');
+const MockTokenRecipient = artifacts.require('MockTokenRecipient');
 
 contract('DivisionsToken', async accounts => {
     let minter = accounts[1];
     let divisionsToken;
+    let tokenRecipient;
 
     before(async () => {
         divisionsToken = await DivisionsToken.new();
+        tokenRecipient = await MockTokenRecipient.new();
     });
 
     beforeEach(async () => {
@@ -147,6 +150,35 @@ contract('DivisionsToken', async accounts => {
             divisionsToken.transferMintership.sendTransaction(newMinter),
             divisionsToken.MintershipTransferred(),
             { oldMinter: minter, newMinter: newMinter }
+        );
+    });
+
+    it('approves and calls', async () => {
+        let approvedAmount = 10 ** 18;
+        let data = web3.toHex("This is data");
+        await divisionsToken.mint(accounts[0], approvedAmount, {from: minter});
+        
+        let allowanceBefore = await divisionsToken.allowance(accounts[0], tokenRecipient.address);
+
+        await expectEvent(
+            divisionsToken.approveAndCall.sendTransaction(
+                tokenRecipient.address, approvedAmount, data
+            ),
+            tokenRecipient.ReceiveApprovalCalled(),
+            {
+                from: accounts[0],
+                value: approvedAmount,
+                token: divisionsToken.address,
+                extraData: data
+            }
+        );
+
+        let allowanceAfter = await divisionsToken.allowance(accounts[0], tokenRecipient.address);
+
+        assert.equal(
+            allowanceAfter.valueOf(),
+            allowanceBefore.plus(approvedAmount).valueOf(),
+            "The approval was not updated"
         );
     });
 });

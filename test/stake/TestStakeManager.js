@@ -10,7 +10,7 @@ const MockCasper = artifacts.require('MockCasper');
 
 const MIN_DEPOSIT_SIZE = web3.toWei(1, 'ether');
 const EPOCH_LENGTH = 20;
-const EPOCH_BEFORE_LOGOUT = 10;
+const EPOCHS_BEFORE_LOGOUT = 10;
 
 contract('StakeManager', async accounts => {
     let casper;
@@ -19,7 +19,6 @@ contract('StakeManager', async accounts => {
     let stakeManager;
 
     before(async () => {
-        console.log(await web3.eth.getBalance(accounts[0]));
 
         validator = accounts[9];
 
@@ -31,7 +30,7 @@ contract('StakeManager', async accounts => {
             casper.address,
             validator,
             treasury.address,
-            EPOCH_BEFORE_LOGOUT
+            EPOCHS_BEFORE_LOGOUT
         );
 
         await treasury.transferTreasurership(stakeManager.address);
@@ -39,7 +38,9 @@ contract('StakeManager', async accounts => {
 
     beforeEach(async () => {
         await stakeManager.transferValidatorship(validator);
-        await stakeManager.setTreasury(treasury.address)
+        await stakeManager.setTreasury(treasury.address);
+        await casper.setRejectNextVote(false);
+        await casper.setRejectNextLogout(false);
     });
 
     it('transfers validatorship', async () => {
@@ -98,13 +99,6 @@ contract('StakeManager', async accounts => {
         );
     });
 
-    it('keeps track of the amount of ether that is deposited at casper', async () => {
-        let depositedWei = web3.toWei(2, 'ether');
-        let numDeposits = 4;
-        await treasury.sendTransaction({ value: depositedWei * numDeposits, from: accounts[7] });
-
-    });
-
     it('decides how much ether can be staked', async () => {
         let depositedWei = web3.toWei(2, 'ether');
         await treasury.sendTransaction({ value: depositedWei, from: accounts[8] });
@@ -122,20 +116,11 @@ contract('StakeManager', async accounts => {
         );
     });
 
-    it('decides at which epoch withdrawals can be made', async () => {
-        let currentEpoch = await casper.current_epoch();
-        let logoutEpoch = await stakeManager.logoutEpoch();
-        assert.equal(
-            logoutEpoch.valueOf(),
-            currentEpoch.plus(EPOCH_BEFORE_LOGOUT).valueOf(),
-            "The epic at which a logout can be made, should equal currentEpoch (" + currentEpoch.valueOf() + ") + EPOCH_BEFORE_LOGOUT (" + EPOCH_BEFORE_LOGOUT + ")"
-        );
-    })
-
     it('makes casper deposits', async () => {
         await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[8] });
 
         let numWithdrawalBoxesBefore = await stakeManager.withdrawalBoxesCount();
+
         let stakeAmount = await stakeManager.getStakeAmount();
 
         await expectEvent(
@@ -200,6 +185,8 @@ contract('StakeManager', async accounts => {
         );
 
         let voteMessage = new VoteMessage(await stakeManager.getVoteMessage(validatorIndex, targetEpoch));
+
+        delete voteMessage.castAt;
 
         assert.equal(web3.toAscii(voteMessage.messageRLP), messageRLP, "The encoded message was not stored correctly");
         assert.equal(web3.toAscii(voteMessage.targetHash).substr(0, targetHash.length), targetHash, "The target hash was not stored correctly");
@@ -271,64 +258,45 @@ contract('StakeManager', async accounts => {
         );
     });
 
-    it('sets logout messages at given WithdrawalBoxes', async () => {
+    it('forwards logout messages to casper and stores them alongside their unencoded parameters', async () => {
         await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
 
         let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
-        let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
-        let logoutMessageRLP = "iwannalogout";
+        let logoutMessageRLP = web3.toHex("iwannalogout");
         let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
-        let epoch = 100;
+        let epoch = web3.toBigNumber(100);
 
         await expectEvent(
-            stakeManager.setLogoutMessage.sendTransaction(
-                withdrawalBoxAddress,
-                logoutMessageRLP,
-                validatorIndex,
-                epoch,
-                { from: validator }
-            ),
-            withdrawalBox.LogoutMessageSet(),
-            {
-                messageRLP: web3.toHex(logoutMessageRLP),
-                validatorIndex: validatorIndex,
-                epoch: web3.toBigNumber(epoch)
-            }
-        );
-
-    });
-
-    it('only lets the validator set logout messages', async () => {
-
-        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
-
-        await stakeManager.makeStakeDeposit();
-
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
-        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
-        let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
-
-        let logoutMessageRLP = "iwannalogout";
-        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
-        let epoch = 100;
-
-        await expectThrow(
-            stakeManager.setLogoutMessage.sendTransaction(
+            stakeManager.logout.sendTransaction(
                 withdrawalBoxAddress,
                 logoutMessageRLP,
                 validatorIndex,
                 epoch
             ),
-            "Only the validator can set logout messages"
+            casper.LogoutCalled(),
+            {
+                logout_msg: logoutMessageRLP
+            }
         );
 
+        let logoutMessage = new LogoutMessage(await stakeManager.logoutMessages(withdrawalBoxAddress));
+        delete logoutMessage.setAt;
+        assert.deepEqual(
+            logoutMessage,
+            {
+                messageRLP: logoutMessageRLP,
+                validatorIndex: validatorIndex,
+                epoch: epoch
+            },
+            "The logout message was not stored correctly"
+        );
     });
 
-    it('logs an event on setLogoutMessage', async () => {
+    it('reverts logouts when casper rejects the message', async () => {
         await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
@@ -336,23 +304,74 @@ contract('StakeManager', async accounts => {
         let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
         let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
-        let logoutMessageRLP = "iwannalogout";
+        let invalidLogoutMessageRLP = "invalidlogout";
         let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
-        let epoch = 100;
+        let epoch = web3.toBigNumber(100);
+
+        await casper.setRejectNextLogout(true);
+
+        await expectThrow(
+            stakeManager.logout(
+                withdrawalBoxAddress,
+                invalidLogoutMessageRLP,
+                validatorIndex,
+                epoch
+            ),
+            "It should only accept logouts accepted by casper"
+        );
+    });
+
+    it('logs an event on logout', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
+
+        await stakeManager.makeStakeDeposit();
+
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+
+        let logoutMessageRLP = web3.toHex("iwannalogout");
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let epoch = web3.toBigNumber(100);
+
         await expectEvent(
-            stakeManager.setLogoutMessage.sendTransaction(
+            stakeManager.logout.sendTransaction(
                 withdrawalBoxAddress,
                 logoutMessageRLP,
                 validatorIndex,
-                epoch,
-                { from: validator }
+                epoch
             ),
-            stakeManager.LogoutMessageSet(),
+            stakeManager.Logout(),
             {
                 withdrawalBox: withdrawalBoxAddress,
-                messageRLP: web3.toHex(logoutMessageRLP),
+                messageRLP: logoutMessageRLP,
                 validatorIndex: validatorIndex,
-                epoch: web3.toBigNumber(epoch)
+                epoch: epoch
+            }
+        );
+    });
+
+    it('notifies the treasury that a logout has happened', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
+
+        await stakeManager.makeStakeDeposit();
+
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesCount()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+
+        let logoutMessageRLP = web3.toHex("iwannalogout");
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let epoch = web3.toBigNumber(100);
+
+        await expectEvent(
+            stakeManager.logout.sendTransaction(
+                withdrawalBoxAddress,
+                logoutMessageRLP,
+                validatorIndex,
+                epoch
+            ),
+            treasury.OnLogoutCalled(),
+            {
+                withdrawalBox: withdrawalBoxAddress
             }
         );
     });
@@ -361,11 +380,19 @@ contract('StakeManager', async accounts => {
 class VoteMessage {
 
     constructor(voteMessageArray) {
-        this.voteMessageArray = voteMessageArray;
         this.messageRLP = voteMessageArray[0];
         this.targetHash = voteMessageArray[1];
         this.targetEpoch = voteMessageArray[2];
         this.sourceEpoch = voteMessageArray[3];
         this.castAt = voteMessageArray[4];
+    }
+}
+
+class LogoutMessage {
+    constructor(logoutMessageArray) {
+        this.messageRLP = logoutMessageArray[0];
+        this.validatorIndex = logoutMessageArray[1];
+        this.epoch = logoutMessageArray[2];
+        this.setAt = logoutMessageArray[3];
     }
 }

@@ -25,6 +25,20 @@ contract MockTreasury is ATreasury {
         emit StakeCalled(_amount, _validatorAddress, _withdrawalBox);
     }
 
-    event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox);
+    function onVote(uint256 _scaledDepositBeforeVote, uint256 _scaledDepositAfterVote) external {
+        emit OnVoteCalled(_scaledDepositBeforeVote, _scaledDepositAfterVote);
+    }
 
+    function onLogout(AWithdrawalBox _withdrawalBox) external {
+        emit OnLogoutCalled(_withdrawalBox);
+    }
+
+    function sweep(AWithdrawalBox _withdrawalBox) external {
+        emit SweepCalled(_withdrawalBox);
+    }
+
+    event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox);
+    event OnVoteCalled(uint256 scaledDepositBeforeVote, uint256 scaledDepositAfterVote);
+    event OnLogoutCalled(AWithdrawalBox withdrawalBox);
+    event SweepCalled(AWithdrawalBox withdrawalBox);
 }

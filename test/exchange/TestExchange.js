@@ -30,7 +30,7 @@ contract('Exchange', async accounts => {
         );
     });
 
-    it('calculates the div reserve', async () => {
+    it('calculates the wei reserve', async () => {
         let exchangeBalance = await web3.eth.getBalance(exchange.address);
         let exchangeTotalPayments = await exchange.totalPayments();
 
@@ -164,11 +164,11 @@ contract('Exchange', async accounts => {
     });
 
     it('calculates the amount that can be filled of a buy order ', async () => {
-
+        assert.fail('TODO');
     });
 
     it('calculates the amount that can be filled of a sell order', async () => {
-
+        assert.fail('TODO');
     });
 
     it('fills buy orders', async () => {
@@ -282,24 +282,28 @@ contract('Exchange', async accounts => {
     });
 
     it('calculates the price of tokens', async () => {
-
+        assert.fail('TODO');
     });
 
     it('converts wei amounts to token', async () => {
-
+        assert.fail('TODO');
     });
 
     it('converts token amounts to wei', async () => {
-
+        assert.fail('TODO');
     });
 
     it('sends wei reserve to the treasury', async () => {
-
+        assert.fail('TODO');
     });
 
     it('handles wei that is deposited by the treasury', async () => {
+        assert.fail('TODO');
+    });
 
-    })
+    it('Places sell orders on receiveApproval', async () => {
+
+    });
 });
 
 class Order {
