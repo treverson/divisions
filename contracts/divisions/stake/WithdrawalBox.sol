@@ -29,7 +29,7 @@ contract WithdrawalBox is AWithdrawalBox {
 
         stakeManager = StakeManager(msg.sender);
     }
-
+    
     function setLogoutEpoch(uint256 _logoutEpoch) external onlyStakeManager {
         logoutEpoch = _logoutEpoch;
     }

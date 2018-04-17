@@ -8,11 +8,6 @@ contract MockWithdrawalBox is AWithdrawalBox {
         emit SweepCalled();
     }
 
-    function setScaledDeposit(uint256 _scaledDeposit) external {
-        scaledDeposit = _scaledDeposit;
-        emit SetScaledDepositCalled(_scaledDeposit);
-    }
-
     function setLogoutEpoch(uint256 _logoutEpoch) external {
         logoutEpoch = _logoutEpoch;
 

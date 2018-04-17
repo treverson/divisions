@@ -1,7 +1,6 @@
 pragma solidity 0.4.21;
 
 import "../../divisions/stake/Treasury.sol";
-import "../../divisions/stake/ACasper.sol";
 
 contract MockTreasury is ATreasury {
     
@@ -11,8 +10,8 @@ contract MockTreasury is ATreasury {
 
     function() external payable {}
 
-    function transferTreasurership(address _treasurer) public onlyOwner {
-        treasurer = _treasurer;
+    function setStakeManager(AStakeManager _stakeManager) public onlyOwner {
+        stakeManager = _stakeManager;
     }
 
     function transfer(address _to, uint256 _amount) external {
@@ -25,10 +24,6 @@ contract MockTreasury is ATreasury {
         emit StakeCalled(_amount, _validatorAddress, _withdrawalBox);
     }
 
-    function onVote(uint256 _scaledDepositBeforeVote, uint256 _scaledDepositAfterVote) external {
-        emit OnVoteCalled(_scaledDepositBeforeVote, _scaledDepositAfterVote);
-    }
-
     function onLogout(AWithdrawalBox _withdrawalBox) external {
         emit OnLogoutCalled(_withdrawalBox);
     }
@@ -37,8 +32,11 @@ contract MockTreasury is ATreasury {
         emit SweepCalled(_withdrawalBox);
     }
 
+    function getTotalPoolSize() external view returns(uint256 size) {
+        return size = address(this).balance;
+    }
+
     event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox);
-    event OnVoteCalled(uint256 scaledDepositBeforeVote, uint256 scaledDepositAfterVote);
     event OnLogoutCalled(AWithdrawalBox withdrawalBox);
     event SweepCalled(AWithdrawalBox withdrawalBox);
 }

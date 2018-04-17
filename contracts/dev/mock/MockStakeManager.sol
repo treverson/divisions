@@ -1,9 +1,18 @@
 pragma solidity 0.4.21;
 
-import "../../divisions/stake/Treasury.sol";
 import "../../divisions/stake/StakeManager.sol";
 
 contract MockStakeManager is AStakeManager {
+    
+    function MockStakeManager(ACasper _casper, ATreasury _treasury) public {
+        casper = _casper;
+        treasury = _treasury;
+    }
+
+    function withdrawalBoxesLength() external view returns (uint256 length) {
+        return withdrawalBoxes.length;
+    }
+
     function transferValidatorship(address _validator) external onlyOwner() {
 
     }
@@ -49,8 +58,14 @@ contract MockStakeManager is AStakeManager {
 
     }
 
-    function withdrawalBoxesCount() external view returns (uint256) {
-
+    function logout(
+        AWithdrawalBox _withdrawalBox,
+        bytes _messageRLP,
+        uint256 _validatorIndex,
+        uint256 _epoch
+    )
+        external
+    {
     }
 
 }

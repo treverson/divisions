@@ -37,12 +37,15 @@ contract('WithdrawalBox', async accounts => {
         );
     });
 
-    it('stores it\'s scaled deposit', async () => {
-        assert.fail('TODO');
-    });
-
     it('stores the epoch at which it was logged out', async () => {
-        assert.fail('TODO');
+        let logoutEpoch = web3.toBigNumber(200);
+        await withdrawalBox.setLogoutEpoch(logoutEpoch);
+
+        assert.deepEqual(
+            await withdrawalBox.logoutEpoch(),
+            logoutEpoch,
+            "The logout epoch was not stored"
+        );
     });
 
     it('logs an event on sweep', async () => {

@@ -34,6 +34,8 @@ contract AStakeManager is Ownable {
     mapping(address => LogoutMessage) public logoutMessages;
     AWithdrawalBox[] public withdrawalBoxes;
 
+    function withdrawalBoxesLength() external view returns (uint256 length);
+
     function transferValidatorship(address _validator) external onlyOwner();
     function setTreasury(ATreasury _treasury) external onlyOwner();
 
@@ -68,7 +70,6 @@ contract AStakeManager is Ownable {
     )
         external;
 
-    function withdrawalBoxesCount() external view returns (uint256);
 
     event ValidatorshipTransferred(address indexed oldValidator, address indexed newValidator);
     event TreasurySet(address indexed oldTreasury, address indexed newTreasury);
@@ -95,6 +96,10 @@ contract StakeManager is AStakeManager {
         epochsBeforeLogout = _epochsBeforeLogout;
     }    
     
+    function withdrawalBoxesLength() external view returns (uint256 length) {
+        return length = withdrawalBoxes.length;
+    }
+
     function transferValidatorship(address _validator) external onlyOwner() {
         require(_validator != address(0));
         emit ValidatorshipTransferred(validator, _validator);
@@ -187,10 +192,6 @@ contract StakeManager is AStakeManager {
         treasury.onLogout(_withdrawalBox);
 
         emit Logout(_withdrawalBox, _messageRLP, _validatorIndex, _epoch);
-    }
-
-    function withdrawalBoxesCount() external view returns (uint256){
-        return withdrawalBoxes.length;
     }
 
     modifier onlyValidator() {

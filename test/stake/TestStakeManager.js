@@ -33,7 +33,7 @@ contract('StakeManager', async accounts => {
             EPOCHS_BEFORE_LOGOUT
         );
 
-        await treasury.transferTreasurership(stakeManager.address);
+        await treasury.setStakeManager(stakeManager.address);
     });
 
     beforeEach(async () => {
@@ -109,9 +109,9 @@ contract('StakeManager', async accounts => {
         let treasuryBalance = await web3.eth.getBalance(treasury.address);
         let stakeAmount = await stakeManager.getStakeAmount();
 
-        assert.equal(
-            stakeAmount.valueOf(),
-            treasuryBalance.valueOf(),
+        assert.deepEqual(
+            stakeAmount,
+            treasuryBalance,
             "The stake amount was not equal to the balance of the treasury"
         );
     });
@@ -135,9 +135,9 @@ contract('StakeManager', async accounts => {
 
         let numWithdrawalBoxesAfter = await stakeManager.withdrawalBoxesCount();
 
-        assert.equal(
-            numWithdrawalBoxesAfter.valueOf(),
-            numWithdrawalBoxesBefore.plus(1).valueOf(),
+        assert.deepEqual(
+            numWithdrawalBoxesAfter,
+            numWithdrawalBoxesBefore.plus(1),
             "The number of withdrawalboxes was not incremented"
         );
     });
@@ -192,6 +192,10 @@ contract('StakeManager', async accounts => {
         assert.equal(web3.toAscii(voteMessage.targetHash).substr(0, targetHash.length), targetHash, "The target hash was not stored correctly");
         assert.equal(voteMessage.targetEpoch, targetEpoch, "The target epoch was not stored correctly");
         assert.equal(voteMessage.sourceEpoch, sourceEpoch, "The source epoch was not stored correctly");
+    });
+
+    it('stores votes even is they were rejected by casper', async () => {
+        assert.fail('TODO');
     });
 
     it('only lets the validator cast votes', async () => {

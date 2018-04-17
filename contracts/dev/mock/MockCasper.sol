@@ -1,7 +1,7 @@
 pragma solidity 0.4.21;
 
 import "../../divisions/stake/ACasper.sol";
-/*  Mock Capser contract. Does not do any checks, 
+/*  Mock Capser contract. Does not do decode RLP, 
     but emits events and sets params so that we
     can check it is interacted with correctly
 

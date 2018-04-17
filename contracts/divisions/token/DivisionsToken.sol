@@ -17,7 +17,7 @@ contract ADivisionsToken is StandardToken, Ownable {
     function burn(uint256 _amount) public;
     function transferMintership(address _minter) onlyOwner public;
 
-    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool);
+    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool success);
     
     event Burn(uint256 amount);
     event Mint(address recipient, uint256 amount);
@@ -67,10 +67,10 @@ contract DivisionsToken is ADivisionsToken {
         minter = _minter;
     }
 
-    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool) {
+    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool success) {
         approve(_spender, _value);
         _spender.receiveApproval(msg.sender, _value, address(this), _extraData);
-        return true;
+        return success = true;
     }
 
     modifier onlyMinter() {
