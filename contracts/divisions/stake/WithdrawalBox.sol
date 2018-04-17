@@ -7,13 +7,10 @@ contract AWithdrawalBox {
    
     uint256 public deployedAt;
     ATreasury public treasury;
-    
-    uint256 public logoutEpoch;
 
     AStakeManager public stakeManager;
 
     function sweep() external;
-    function setLogoutEpoch(uint256 _logoutEpoch) external;
 
     event EtherReceived(uint256 amount);
     event Sweep(uint256 amount);
@@ -28,10 +25,6 @@ contract WithdrawalBox is AWithdrawalBox {
         treasury = _treasury;
 
         stakeManager = StakeManager(msg.sender);
-    }
-    
-    function setLogoutEpoch(uint256 _logoutEpoch) external onlyStakeManager {
-        logoutEpoch = _logoutEpoch;
     }
 
     function() public payable {

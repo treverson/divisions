@@ -22,6 +22,10 @@ contract ACasper {
 
     int128 public dynasty = 0;
 
+    mapping(int128 => int128) public dynasty_start_epoch;
+
+    mapping(int128 => int128) public dynasty_in_epoch;
+
     mapping(int128 => int128) public deposit_scale_factor;
 
     mapping(int128 => Validator) public validators;

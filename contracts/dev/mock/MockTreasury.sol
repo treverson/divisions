@@ -24,10 +24,6 @@ contract MockTreasury is ATreasury {
         emit StakeCalled(_amount, _validatorAddress, _withdrawalBox);
     }
 
-    function onLogout(AWithdrawalBox _withdrawalBox) external {
-        emit OnLogoutCalled(_withdrawalBox);
-    }
-
     function sweep(AWithdrawalBox _withdrawalBox) external {
         emit SweepCalled(_withdrawalBox);
     }
@@ -37,6 +33,5 @@ contract MockTreasury is ATreasury {
     }
 
     event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox);
-    event OnLogoutCalled(AWithdrawalBox withdrawalBox);
     event SweepCalled(AWithdrawalBox withdrawalBox);
 }

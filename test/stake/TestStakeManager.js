@@ -353,32 +353,6 @@ contract('StakeManager', async accounts => {
             }
         );
     });
-
-    it('notifies the treasury that a logout has happened', async () => {
-        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
-
-        await stakeManager.makeStakeDeposit();
-
-        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
-        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
-
-        let logoutMessageRLP = web3.toHex("iwannalogout");
-        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
-        let epoch = web3.toBigNumber(100);
-
-        await expectEvent(
-            stakeManager.logout.sendTransaction(
-                withdrawalBoxAddress,
-                logoutMessageRLP,
-                validatorIndex,
-                epoch
-            ),
-            treasury.OnLogoutCalled(),
-            {
-                withdrawalBox: withdrawalBoxAddress
-            }
-        );
-    });
 });
 
 class VoteMessage {

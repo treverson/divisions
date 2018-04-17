@@ -11,8 +11,6 @@ contract ATreasury is Ownable {
     AStakeManager public stakeManager;
     ACasper public casper;
 
-    uint256 public totalLoggedOutDeposit;
-
     function() external payable;
 
     function setStakeManager(AStakeManager _stakeManager) public onlyOwner();
@@ -21,8 +19,6 @@ contract ATreasury is Ownable {
     function deposit() external payable;
 
     function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external;
-    
-    function onLogout(AWithdrawalBox _withdrawalBox) external;
 
     function sweep(AWithdrawalBox _withdrawalBox) external;
 
@@ -41,7 +37,6 @@ contract Treasury is ATreasury {
 
     function Treasury(ACasper _casper) public {
         casper = _casper;
-        totalLoggedOutDeposit = 0;
     }
 
     function() external payable {
@@ -70,59 +65,49 @@ contract Treasury is ATreasury {
         emit Stake(_validatorAddress, _withdrawalBox, _amount);
     }
 
-    function onLogout(AWithdrawalBox _withdrawalBox) external onlyStakeManager {
-        int128 validatorIndex = casper.validator_indexes(address(_withdrawalBox));
-        int128 scaledDeposit;
-        (scaledDeposit, , , ,) = casper.validators(validatorIndex);
-        
-        int128 currentEpoch = casper.current_epoch();
-        _withdrawalBox.setLogoutEpoch(uint256(currentEpoch));
-
-        uint256 depositScaleFactor = uint256(casper.deposit_scale_factor(currentEpoch));
-        
-        totalLoggedOutDeposit = totalLoggedOutDeposit.add(uint256(scaledDeposit).mul(depositScaleFactor));
-    }
-
     function sweep(AWithdrawalBox _withdrawalBox) external {
         _withdrawalBox.sweep();
-
-        int128 validatorIndex = casper.validator_indexes(address(_withdrawalBox));
-        int128 scaledDeposit;
-        (scaledDeposit, , , ,) = casper.validators(validatorIndex);
-
-        int128 logoutEpoch = int128(_withdrawalBox.logoutEpoch());
-
-        uint256 depositScaleFactor = uint256(casper.deposit_scale_factor(logoutEpoch));
-
-        totalLoggedOutDeposit = totalLoggedOutDeposit.sub(uint256(scaledDeposit).mul(depositScaleFactor));
-
         emit Sweep(_withdrawalBox);
     }
 
     function getTotalPoolSize() external view returns(uint256 size) {
         size = address(this).balance;
 
-        uint256 depositScaleFactor = uint256(casper.deposit_scale_factor(casper.current_epoch()));
-        uint256 totalScaledDeposit = 0;
-        // Can we remove this loop somehow?
+        uint256 currentDepositScaleFactor = uint256(casper.deposit_scale_factor(casper.current_epoch()));
+        uint256 totalScaledActiveDeposit = 0; //The scaled total amount of ether that is currently used to stake in the casper contract
+        uint256 totalLoggedOutDeposit = 0; //The total amount of ether in the 
+        uint256 totalWithdrawalBoxBalance = 0; //The total balance of the withdrawalboxes
+
         for(uint256 i = 0; i < stakeManager.withdrawalBoxesLength(); i ++) {
             AWithdrawalBox withdrawalBox = stakeManager.withdrawalBoxes(i);
-            if(withdrawalBox.logoutEpoch() != 0) continue;
         
             int128 validatorIndex = casper.validator_indexes(address(withdrawalBox));
-            int128 scaledDeposit;
-            (scaledDeposit, , , ,) = casper.validators(validatorIndex);
-        
-            totalScaledDeposit += uint256(scaledDeposit);
+            int128 currentDynasty = casper.dynasty();
+            if(validatorIndex != 0) {
+                int128 scaledDeposit;
+                int128 endDynasty;
+                (scaledDeposit,  endDynasty, , ,) = casper.validators(validatorIndex);
+                if(endDynasty > currentDynasty)
+                    totalScaledActiveDeposit += uint256(scaledDeposit);
+                 else {
+                    int128 endEpoch = getEndEpoch(endDynasty);
+                    totalLoggedOutDeposit += uint256(scaledDeposit * casper.deposit_scale_factor(endEpoch));
+                 }
+            }
+            totalWithdrawalBoxBalance += address(withdrawalBox).balance;          
         }
 
-        size += totalScaledDeposit * depositScaleFactor;
-
+        size += totalScaledActiveDeposit * currentDepositScaleFactor;
+        size += totalWithdrawalBoxBalance;
         return size += totalLoggedOutDeposit;
     }
 
     function handleDeposit(address sender, uint256 value) internal {
         emit Deposit(sender, value);
+    }
+
+    function getEndEpoch(int128 endDynasty) internal view returns (int128 endEpoch) {
+        return casper.dynasty_start_epoch(endDynasty + 1);
     }
 
     modifier onlyStakeManager() {

@@ -188,8 +188,9 @@ contract StakeManager is AStakeManager {
             setAt: block.number
         });
 
+        
+
         casper.logout(_messageRLP);
-        treasury.onLogout(_withdrawalBox);
 
         emit Logout(_withdrawalBox, _messageRLP, _validatorIndex, _epoch);
     }
