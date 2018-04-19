@@ -13,6 +13,8 @@ let WithdrawalBox = artifacts.require('WithdrawalBox');
 const MIN_DEPOSIT_SIZE = web3.toWei(1, 'ether');
 const EPOCH_LENGTH = 20;
 const EPOCHS_BEFORE_LOGOUT = 10;
+const DYNASTY_LOGOUT_DELAY = 0;
+const WITHDRAWAL_DELAY = 0;
 
 
 contract('Prototype 1', async accounts => {
@@ -24,10 +26,10 @@ contract('Prototype 1', async accounts => {
     before(async () => {
         validator = accounts[1];
 
-        casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH);
+        casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
         treasury = await Treasury.new(casper.address);
         stakeManager = await StakeManager.new(casper.address, validator, treasury.address, EPOCHS_BEFORE_LOGOUT);
-        await treasury.transferTreasurership(stakeManager.address);
+        await treasury.setStakeManager(stakeManager.address);
     });
 
     it('Completes a staking cycle', async () => {
@@ -47,26 +49,6 @@ contract('Prototype 1', async accounts => {
 
         let withdrawalBox = WithdrawalBox.at(out.withdrawal_addr);
         let validatorIndex = await casper.validator_indexes(withdrawalBox.address);
-
-        // Set logout message
-        let logoutMessage = web3.toHex("logoutmessage");
-        let logoutEpoch = 100;
-
-        await expectEvent(
-            stakeManager.setLogoutMessage.sendTransaction(
-                withdrawalBox.address,
-                logoutMessage,
-                validatorIndex,
-                logoutEpoch,
-                { from: validator }
-            ),
-            withdrawalBox.LogoutMessageSet(),
-            {
-                messageRLP: logoutMessage,
-                validatorIndex: validatorIndex,
-                epoch: logoutEpoch
-            }
-        );
 
         // Vote
         let vote = web3.toHex("votemessage");
@@ -88,8 +70,12 @@ contract('Prototype 1', async accounts => {
         );
 
         // Logout
-        logoutMessage = (await withdrawalBox.logoutMessage())[0];
-        await casper.logout(logoutMessage);
+        await stakeManager.logout(
+            withdrawalBox.address,
+            "logoutMessageRLP",
+            validatorIndex,
+            0
+        );
 
         // Withdraw
         await expectEvent(
@@ -98,8 +84,9 @@ contract('Prototype 1', async accounts => {
             { amount: stakeAmount }
         );
 
+        // Sweep
         await expectEvent(
-            withdrawalBox.sweep.sendTransaction(),
+            treasury.sweep.sendTransaction(withdrawalBox.address),
             treasury.Deposit(),
             { from: withdrawalBox.address, amount: stakeAmount }
         )
