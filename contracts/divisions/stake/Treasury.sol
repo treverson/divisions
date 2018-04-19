@@ -98,7 +98,7 @@ contract Treasury is ATreasury {
             if(validatorIndex != 0) { // If the validator is currently active
                 int128 scaledDeposit;
                 int128 endDynasty;
-                (scaledDeposit, endDynasty, , ,) = casper.validators(validatorIndex);
+                (scaledDeposit, , endDynasty, ,) = casper.validators(validatorIndex);
                 if(endDynasty >= currentDynasty) // If the validator is not logged out
                     totalScaledActiveDeposit += uint256(scaledDeposit);
                 else {

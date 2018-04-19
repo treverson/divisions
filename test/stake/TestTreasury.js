@@ -315,14 +315,13 @@ contract('Treasury', async accounts => {
             .plus(totalScaledActiveDeposit
                 .times(depositScaleFactor)
             );
-        let actualTotalPoolSize = await treasury.getTotalPoolSize.sendTransaction();
-        console.log(expectedTotalPoolSize.valueOf(), actualTotalPoolSize.valueOf());
-        console.log(totalLoggedOutDeposit.valueOf(), totalWithdrawalBoxBalance.valueOf(), totalScaledActiveDeposit.valueOf(), depositScaleFactor.valueOf());
-        // assert.deepEqual(
-        //     actualTotalPoolSize,
-        //     expectedTotalPoolSize,
-        //     "The total pool size was not correct"
-        // );
+        let actualTotalPoolSize = await treasury.getTotalPoolSize();
+
+        assert.deepEqual(
+            actualTotalPoolSize,
+            expectedTotalPoolSize,
+            "The total pool size was not correct"
+        );
     });
 });
 
