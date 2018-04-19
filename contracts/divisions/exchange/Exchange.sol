@@ -69,6 +69,7 @@ contract Exchange is AExchange {
     }
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
+        require(_token == address(divToken));
         //TODO
     }
 

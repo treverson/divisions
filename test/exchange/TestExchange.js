@@ -1,3 +1,5 @@
+import { AssertionError } from "assert";
+
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 let TransactionListener = require('../../test-helpers/TransactionListener');
@@ -30,298 +32,352 @@ contract('Exchange', async accounts => {
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
         treasury = await MockTreasury.new(casper.address);
         stakeManager = await MockStakeManager.new(casper.address, treasury.address);
-        
+
         await treasury.setStakeManager(stakeManager.address);
-        
+    });
+
+    beforeEach(async () => {
         divToken = await MockDivisionsToken.new();
         exchange = await Exchange.new(divToken.address, stakeManager.address);
-    });
+    })
 
-    it('calculates the div reserve', async () => {
-        let expectedDivReserve = await divToken.balanceOf(exchange.address);
-        let actualDivReserve = await exchange.divReserve();
+    // it('calculates the div reserve', async () => {
+    //     let expectedDivReserve = await divToken.balanceOf(exchange.address);
+    //     let actualDivReserve = await exchange.divReserve();
 
-        assert.equal(
-            expectedDivReserve.valueOf(),
-            actualDivReserve.valueOf(),
-            "The DIV reserve was not calculated correctly"
-        );
-    });
+    //     assert.equal(
+    //         expectedDivReserve.valueOf(),
+    //         actualDivReserve.valueOf(),
+    //         "The DIV reserve was not calculated correctly"
+    //     );
+    // });
 
-    it('calculates the wei reserve', async () => {
-        let exchangeBalance = await web3.eth.getBalance(exchange.address);
-        let exchangeTotalPayments = await exchange.totalPayments();
+    // it('calculates the wei reserve', async () => {
+    //     let exchangeBalance = await web3.eth.getBalance(exchange.address);
+    //     let exchangeTotalPayments = await exchange.totalPayments();
 
-        let expectedWeiReserve = exchangeBalance.minus(exchangeTotalPayments);
+    //     let expectedWeiReserve = exchangeBalance.minus(exchangeTotalPayments);
 
-        let actualWeiReserve = await exchange.weiReserve();
+    //     let actualWeiReserve = await exchange.weiReserve();
 
-        assert.equal(
-            actualWeiReserve.valueOf(),
-            expectedWeiReserve.valueOf(),
-            "The wei reserve was not calculated correctly"
-        );
-    });
+    //     assert.equal(
+    //         actualWeiReserve.valueOf(),
+    //         expectedWeiReserve.valueOf(),
+    //         "The wei reserve was not calculated correctly"
+    //     );
+    // });
 
-    it('places buy orders', async () => {
-        let buyer = accounts[1];
-        let buyAmount = web3.toWei(2, 'ether');
+    // it('places buy orders', async () => {
+    //     let buyer = accounts[1];
+    //     let buyAmount = web3.toWei(2, 'ether');
 
-        let buyOrdersLengthBefore = await exchange.buyOrdersLength();
-        let buyOrderIndexesBefore = await exchange.getBuyOrderIndexes(buyer);
-        
-        await exchange.placeBuyOrder({ from: buyer, value: buyAmount });
+    //     let buyOrdersLengthBefore = await exchange.buyOrdersLength();
+    //     let buyOrderIndexesBefore = await exchange.getBuyOrderIndexes(buyer);
 
-        let buyOrdersLengthAfter = await exchange.buyOrdersLength();
-        let buyOrderIndexesAfter = await exchange.getBuyOrderIndexes(buyer);
+    //     await exchange.placeBuyOrder({ from: buyer, value: buyAmount });
 
-        assert.equal(
-            buyOrdersLengthAfter.valueOf(),
-            buyOrdersLengthBefore.plus(1).valueOf(),
-            "The number of buy orders was not incremented"
-        );
+    //     let buyOrdersLengthAfter = await exchange.buyOrdersLength();
+    //     let buyOrderIndexesAfter = await exchange.getBuyOrderIndexes(buyer);
 
-        assert.equal(
-            buyOrderIndexesAfter.length,
-            buyOrderIndexesBefore.length + 1,
-            "The buy order index was not stored"
-        );
+    //     assert.equal(
+    //         buyOrdersLengthAfter.valueOf(),
+    //         buyOrdersLengthBefore.plus(1).valueOf(),
+    //         "The number of buy orders was not incremented"
+    //     );
 
-        assert.equal(
-            buyOrderIndexesAfter[buyOrderIndexesAfter.length - 1].valueOf(),
-            buyOrdersLengthAfter.minus(1).valueOf(),
-            "The stored index was not correct"
-        );
+    //     assert.equal(
+    //         buyOrderIndexesAfter.length,
+    //         buyOrderIndexesBefore.length + 1,
+    //         "The buy order index was not stored"
+    //     );
 
-        let buyOrder = new Order(await exchange.buyOrders(buyOrdersLengthAfter.minus(1)));
+    //     assert.equal(
+    //         buyOrderIndexesAfter[buyOrderIndexesAfter.length - 1].valueOf(),
+    //         buyOrdersLengthAfter.minus(1).valueOf(),
+    //         "The stored index was not correct"
+    //     );
 
-        assert.equal(buyOrder.sender, buyer, "The sender of the order was not stored correctly");
-        assert.equal(buyOrder.amount.valueOf(), buyAmount.valueOf(), "The amount was no stored correctly");
-        assert.equal(buyOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
+    //     let buyOrder = new Order(await exchange.buyOrders(buyOrdersLengthAfter.minus(1)));
 
-        await expectThrow(
-            exchange.placeBuyOrder({ from: buyer, value: 0 }),
-            "Cannot place buy orders with a 0 amount"
-        )
-    });
+    //     assert.equal(buyOrder.sender, buyer, "The sender of the order was not stored correctly");
+    //     assert.equal(buyOrder.amount.valueOf(), buyAmount.valueOf(), "The amount was no stored correctly");
+    //     assert.equal(buyOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
 
-    it('logs an event on placeBuyOrder', async () => {
-        let buyer = accounts[1];
-        let buyAmount = web3.toWei(2, 'ether');
+    //     await expectThrow(
+    //         exchange.placeBuyOrder({ from: buyer, value: 0 }),
+    //         "Cannot place buy orders with a 0 amount"
+    //     )
+    // });
 
-        let buyOrdersLength = await exchange.buyOrdersLength();
+    // it('places sell orders on reveiveApproval from divToken', async () => {
+    //     assert.fail('TODO');
+    // });
 
-        await expectEvent(
-            exchange.placeBuyOrder.sendTransaction({ from: buyer, value: buyAmount }),
-            exchange.BuyOrderPlaced(),
-            { index: buyOrdersLength, sender: buyer, amount: buyAmount }
-        );
-    });
+    // it('logs an event on placeBuyOrder', async () => {
+    //     let buyer = accounts[1];
+    //     let buyAmount = web3.toWei(2, 'ether');
 
-    it('places sell orders', async () => {
-        let seller = accounts[1];
-        let sellAmount = web3.toBigNumber(2 * 10 ** 18);
+    //     let buyOrdersLength = await exchange.buyOrdersLength();
 
-        await divToken.mint(seller, sellAmount);
-        await divToken.approve(exchange.address, sellAmount, { from: seller });
+    //     await expectEvent(
+    //         exchange.placeBuyOrder.sendTransaction({ from: buyer, value: buyAmount }),
+    //         exchange.BuyOrderPlaced(),
+    //         { index: buyOrdersLength, sender: buyer, amount: buyAmount }
+    //     );
+    // });
 
-        let sellOrdersLengthBefore = await exchange.sellOrdersLength();
-        let sellOrderIndexesBefore = await exchange.getSellOrderIndexes(seller);
+    // it('places sell orders', async () => {
+    //     let seller = accounts[1];
+    //     let sellAmount = web3.toBigNumber(2 * 10 ** 18);
 
-        await exchange.placeSellOrder(sellAmount, { from: seller });
+    //     await divToken.mint(seller, sellAmount);
+    //     await divToken.approve(exchange.address, sellAmount, { from: seller });
 
-        let sellOrdersLengthAfter = await exchange.sellOrdersLength();
-        let sellOrderIndexesAfter = await exchange.getSellOrderIndexes(seller);
+    //     let sellOrdersLengthBefore = await exchange.sellOrdersLength();
+    //     let sellOrderIndexesBefore = await exchange.getSellOrderIndexes(seller);
 
-        assert.equal(
-            sellOrdersLengthAfter.valueOf(),
-            sellOrdersLengthBefore.plus(1).valueOf(),
-            "The number of sell orders was not incremented"
-        );
+    //     await exchange.placeSellOrder(sellAmount, { from: seller });
 
-        assert.equal(
-            sellOrderIndexesAfter.length,
-            sellOrderIndexesBefore.length + 1,
-            "The sell order index was not stored"
-        );
+    //     let sellOrdersLengthAfter = await exchange.sellOrdersLength();
+    //     let sellOrderIndexesAfter = await exchange.getSellOrderIndexes(seller);
 
-        assert.equal(
-            sellOrderIndexesAfter[sellOrderIndexesAfter.length - 1].valueOf(),
-            sellOrdersLengthAfter.minus(1).valueOf(),
-            "The stored index was not correct"
-        );
+    //     assert.equal(
+    //         sellOrdersLengthAfter.valueOf(),
+    //         sellOrdersLengthBefore.plus(1).valueOf(),
+    //         "The number of sell orders was not incremented"
+    //     );
 
-        let sellOrder = new Order(await exchange.getSellOrder(sellOrdersLengthAfter.minus(1)));
+    //     assert.equal(
+    //         sellOrderIndexesAfter.length,
+    //         sellOrderIndexesBefore.length + 1,
+    //         "The sell order index was not stored"
+    //     );
 
-        assert.equal(sellOrder.sender, seller, "The sender of the order was not stored correctly");
-        assert.equal(sellOrder.amount.valueOf(), sellAmount.valueOf(), "The amount was no stored correctly");
-        assert.equal(sellOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
+    //     assert.equal(
+    //         sellOrderIndexesAfter[sellOrderIndexesAfter.length - 1].valueOf(),
+    //         sellOrdersLengthAfter.minus(1).valueOf(),
+    //         "The stored index was not correct"
+    //     );
 
-        await divToken.mint(seller, 100);
-        await divToken.approve(exchange.address, 100);
-        await expectThrow(
-            exchange.placeSellOrder(0, { from: seller }),
-            "Cannot place sell orders with a 0 amount"
-        );
-    });
+    //     let sellOrder = new Order(await exchange.getSellOrder(sellOrdersLengthAfter.minus(1)));
 
-    it('logs an event on placeSellOrder', async () => {
-        let seller = accounts[1];
-        let sellAmount = web3.toBigNumber(2 * 10 ** 18);
+    //     assert.equal(sellOrder.sender, seller, "The sender of the order was not stored correctly");
+    //     assert.equal(sellOrder.amount.valueOf(), sellAmount.valueOf(), "The amount was no stored correctly");
+    //     assert.equal(sellOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
 
-        await divToken.mint(seller, sellAmount);
-        await divToken.approve(exchange.address, sellAmount, { from: seller });
+    //     await divToken.mint(seller, 100);
+    //     await divToken.approve(exchange.address, 100);
+    //     await expectThrow(
+    //         exchange.placeSellOrder(0, { from: seller }),
+    //         "Cannot place sell orders with a 0 amount"
+    //     );
+    // });
 
-        let sellOrdersLength = await exchange.sellOrdersLength();
+    // it('logs an event on placeSellOrder', async () => {
+    //     let seller = accounts[1];
+    //     let sellAmount = web3.toBigNumber(2 * 10 ** 18);
 
-        await expectEvent(
-            exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
-            exchange.BuyOrderPlaced(),
-            { index: sellOrdersLength, sender: seller, amount: sellAmount }
-        );
-    });
+    //     await divToken.mint(seller, sellAmount);
+    //     await divToken.approve(exchange.address, sellAmount, { from: seller });
 
-    it('calculates the amount that can be filled of a buy order ', async () => {
-        assert.fail('TODO');
-    });
+    //     let sellOrdersLength = await exchange.sellOrdersLength();
 
-    it('calculates the amount that can be filled of a sell order', async () => {
-        assert.fail('TODO');
-    });
+    //     await expectEvent(
+    //         exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
+    //         exchange.BuyOrderPlaced(),
+    //         { index: sellOrdersLength, sender: seller, amount: sellAmount }
+    //     );
+    // });
 
-    it('fills buy orders', async () => {
-        let seller = accounts[2];
-        let sellAmount = 100 * 10 ** 18;
-        await divToken.mint(seller, sellAmount);
-        await divToken.approve(exchange.address, sellAmount, { from: seller });
-        await exchange.placeSellOrder(sellAmount, { from: seller });
+    // it('calculates the amount that can be filled of a buy order ', async () => {
+    //     assert.fail('TODO');
+    // });
 
-        let buyer = accounts[1]
-        let buyAmount = web3.toWei(4, 'ether');
-        try {
-            let buyOrderIndex = (await transactionListener.listen(
-                exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
-                exchange.BuyOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+    // it('calculates the amount that can be filled of a sell order', async () => {
+    //     assert.fail('TODO');
+    // });
 
-        await exchange.fillBuyOrder(buyOrderIndex);
+    // it('fills buy orders', async () => {
+    //     let seller = accounts[2];
+    //     let sellAmount = 100 * 10 ** 18;
+    //     await divToken.mint(seller, sellAmount);
+    //     await divToken.approve(exchange.address, sellAmount, { from: seller });
+    //     await exchange.placeSellOrder(sellAmount, { from: seller });
 
-        let buyOrder = new Order(await exchange.getBuyOrder(buyOrderIndex));
+    //     let buyer = accounts[1]
+    //     let buyAmount = web3.toWei(4, 'ether');
+    //     try {
+    //         let buyOrderIndex = (await transactionListener.listen(
+    //             exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
+    //             exchange.BuyOrderPlaced()
+    //         )).index;
+    //     } finally {
+    //         transactionListener.dispose();
+    //     }
 
-        assert.equal(
-            buyOrder.amountFilled.valueOf(),
-            buyAmount.valueOf(),
-            "The order was not fully filled"
-        );
-    });
+    //     await exchange.fillBuyOrder(buyOrderIndex);
 
-    it('logs an event on fillBuyOrder', async () => {
-        let seller = accounts[2];
-        let sellAmount = web3.toBigNumber(100 * 10 ** 18);
-        await divToken.mint(seller, sellAmount);
-        await divToken.approve(exchange.address, sellAmount, { from: seller });
-        await exchange.placeSellOrder(sellAmount, { from: seller });
+    //     let buyOrder = new Order(await exchange.getBuyOrder(buyOrderIndex));
 
-        let buyer = accounts[1]
-        let buyAmount = web3.toWei(4, 'ether');
-        try {
-            let buyOrderIndex = (await transactionListener.listen(
-                exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
-                exchange.BuyOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+    //     assert.equal(
+    //         buyOrder.amountFilled.valueOf(),
+    //         buyAmount.valueOf(),
+    //         "The order was not fully filled"
+    //     );
+    // });
 
-        await expectEvent(
-            exchange.fillBuyOrder.sendTransaction(buyOrderIndex),
-            exchange.BuyOrderFilled(),
-            { index: buyOrderIndex, amountFilled: buyAmount }
-        );
-    });
+    // it('logs an event on fillBuyOrder', async () => {
+    //     let seller = accounts[2];
+    //     let sellAmount = web3.toBigNumber(100 * 10 ** 18);
+    //     await divToken.mint(seller, sellAmount);
+    //     await divToken.approve(exchange.address, sellAmount, { from: seller });
+    //     await exchange.placeSellOrder(sellAmount, { from: seller });
 
-    it('fills sell orders', async () => {
-        let buyer = accounts[2]
-        let buyAmount = web3.toWei(20, 'ether');
-        await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
+    //     let buyer = accounts[1]
+    //     let buyAmount = web3.toWei(4, 'ether');
+    //     try {
+    //         let buyOrderIndex = (await transactionListener.listen(
+    //             exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
+    //             exchange.BuyOrderPlaced()
+    //         )).index;
+    //     } finally {
+    //         transactionListener.dispose();
+    //     }
 
-        let seller = accounts[1];
-        let sellAmount = web3.toBigNumber(1 * 10 ** 18);
-        await divToken.mint(seller, sellAmount);
-        await divToken.approve(exchange.address, sellAmount, { from: seller });
+    //     await expectEvent(
+    //         exchange.fillBuyOrder.sendTransaction(buyOrderIndex),
+    //         exchange.BuyOrderFilled(),
+    //         { index: buyOrderIndex, amountFilled: buyAmount }
+    //     );
+    // });
 
-        try {
-            let sellOrderIndex = (await transactionListener.listen(
-                exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
-                exchange.SellOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+    // it('fills sell orders', async () => {
+    //     let buyer = accounts[2]
+    //     let buyAmount = web3.toWei(20, 'ether');
+    //     await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
 
-        await exchange.fillSellOrder(sellOrderIndex);
-        let sellOrderArray = await exchange.getSellOrder(sellOrderIndex);
-        let sellOrder = new Order(await exchange.getSellOrder(sellOrderIndex));
+    //     let seller = accounts[1];
+    //     let sellAmount = web3.toBigNumber(1 * 10 ** 18);
+    //     await divToken.mint(seller, sellAmount);
+    //     await divToken.approve(exchange.address, sellAmount, { from: seller });
 
-        assert.equal(
-            sellOrder.amountFilled.valueOf(),
-            sellAmount.valueOf(),
-            "The order was not fully filled"
-        );
-    });
+    //     try {
+    //         let sellOrderIndex = (await transactionListener.listen(
+    //             exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
+    //             exchange.SellOrderPlaced()
+    //         )).index;
+    //     } finally {
+    //         transactionListener.dispose();
+    //     }
 
-    it('logs an event on fillSellOrder()', async () => {
-        let buyer = accounts[2]
-        let buyAmount = web3.toWei(20, 'ether');
-        await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
+    //     await exchange.fillSellOrder(sellOrderIndex);
+    //     let sellOrderArray = await exchange.getSellOrder(sellOrderIndex);
+    //     let sellOrder = new Order(await exchange.getSellOrder(sellOrderIndex));
 
-        let seller = accounts[2];
-        let sellAmount = web3.toBigNumber(100 * 10 ** 18);
-        await divToken.mint(seller, sellAmount);
-        await divToken.approve(exchange.address, sellAmount, { from: seller });
+    //     assert.equal(
+    //         sellOrder.amountFilled.valueOf(),
+    //         sellAmount.valueOf(),
+    //         "The order was not fully filled"
+    //     );
+    // });
 
-        try {
-            let sellOrderIndex = (await transactionListener.listen(
-                exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
-                exchange.SellOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+    // it('logs an event on fillSellOrder()', async () => {
+    //     let buyer = accounts[2]
+    //     let buyAmount = web3.toWei(20, 'ether');
+    //     await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
 
-        await expectEvent(
-            exchange.fillSellOrder.sendTransaction(sellOrderIndex),
-            exchange.SellOrderFilled(),
-            { index: sellOrderIndex, amountFilled: sellAmount }
-        );
-    });
+    //     let seller = accounts[2];
+    //     let sellAmount = web3.toBigNumber(100 * 10 ** 18);
+    //     await divToken.mint(seller, sellAmount);
+    //     await divToken.approve(exchange.address, sellAmount, { from: seller });
+
+    //     try {
+    //         let sellOrderIndex = (await transactionListener.listen(
+    //             exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
+    //             exchange.SellOrderPlaced()
+    //         )).index;
+    //     } finally {
+    //         transactionListener.dispose();
+    //     }
+
+    //     await expectEvent(
+    //         exchange.fillSellOrder.sendTransaction(sellOrderIndex),
+    //         exchange.SellOrderFilled(),
+    //         { index: sellOrderIndex, amountFilled: sellAmount }
+    //     );
+    // });
 
     it('calculates the price of tokens', async () => {
-        assert.fail('TODO');
+        await treasury.setTotalPoolSize(0);
+
+        let decimals = (await divToken.decimals()).valueOf();
+
+        let totalDivSupply = await divToken.totalSupply();
+        let expectedDivPrice = 10 ** decimals;
+
+        let actualDivPrice = await exchange.divPrice();
+
+        assert.equal(
+            actualDivPrice.valueOf(),
+            expectedDivPrice,
+            "When both DivisionsToken.totalSupply() and Treasury.getTotalPoolSize() are 0, price should be 10 ** DivisionsToken.decimals()"
+        );
+
+        let mintedDiv = 5 * 10 ** decimals;
+        await divToken.mint(exchange.address, mintedDiv);
+
+        actualDivPrice = await exchange.divPrice();
+
+        assert.equal(
+            actualDivPrice.valueOf(),
+            expectedDivPrice,
+            "When DivisionsToken.totalSupply() == DivisionsToken.balanceOf(exchange) and Treasury.getTotalPoolSize() == 0, price should be 10 ** DivisionsToken.decimals()"
+        );
+
+        await treasury.setTotalPoolSize(20 * 10 ** 18);
+        
+        assert.equal(
+            actualDivPrice.valueOf(),
+            expectedDivPrice,
+            "When DivisionsToken.totalSupply() == DivisionsToken.balanceOf(exchange) and Treasury.getTotalPoolSize() > 0, price should be 10 ** DivisionsToken.decimals()"
+        );
+
+        await treasury.setTotalPoolSize(0);
+        await divToken.burnFrom(exchange.address, mintedDiv);
+        await divToken.mint(accounts[4], mintedDiv);
+
+        actualDivPrice = await exchange.divPrice();
+
+        assert.equal(
+            actualDivPrice.valueOf(),
+            expectedDivPrice,
+            "When DivisionsToken.totalSupply > DivisionToken.balanceOf(exchange) and Treasury.getTotalPoolSize() is 0, price should be 10 ** DivisionsToken.decimals()"
+        );
+
+        await treasury.setTotalPoolSize(20 * 10 ** 18);
+        
+
     });
 
-    it('converts wei amounts to token', async () => {
-        assert.fail('TODO');
-    });
+    // it('converts wei amounts to token', async () => {
+    //     assert.fail('TODO');
+    // });
 
-    it('converts token amounts to wei', async () => {
-        assert.fail('TODO');
-    });
+    // it('converts token amounts to wei', async () => {
+    //     assert.fail('TODO');
+    // });
 
-    it('sends wei reserve to the treasury', async () => {
-        assert.fail('TODO');
-    });
+    // it('sends wei reserve to the treasury', async () => {
+    //     assert.fail('TODO');
+    // });
 
-    it('handles wei that is deposited by the treasury', async () => {
-        assert.fail('TODO');
-    });
+    // it('handles wei that is deposited by the treasury', async () => {
+    //     assert.fail('TODO');
+    // });
 
-    it('Places sell orders on receiveApproval', async () => {
+    // it('Places sell orders on receiveApproval', async () => {
 
-    });
+    // });
 });
 
 class Order {
