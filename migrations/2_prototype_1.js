@@ -10,11 +10,20 @@ const minDepositSize = web3.toWei(1, 'ether');
 const epochLength = 20;
 const epochsBeforeLogout = 10;
 
+const dynastyLogoutDelay = 0;
+const withdrawalDelay = 0;
+
 const validator = web3.eth.accounts[1];
 
 module.exports = async deployer => {
     try {
-        await deployer.deploy(MockCasper, minDepositSize, epochLength);
+        await deployer.deploy(
+            MockCasper,
+            minDepositSize,
+            epochLength,
+            dynastyLogoutDelay,
+            withdrawalDelay
+        );
 
         await deployer.deploy(Treasury, MockCasper.address);
 

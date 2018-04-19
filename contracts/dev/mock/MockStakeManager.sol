@@ -24,7 +24,7 @@ contract MockStakeManager is AStakeManager {
     }
 
     function getStakeAmount() public view returns (uint256 amount){ 
-        return amount =  address(treasury).balance;
+        return amount = address(treasury).balance;
     }
     function makeStakeDeposit() external{
         AWithdrawalBox withdrawalBox = new MockWithdrawalBox();

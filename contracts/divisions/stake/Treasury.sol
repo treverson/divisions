@@ -71,35 +71,7 @@ contract Treasury is ATreasury {
     }
 
     function getTotalPoolSize() external view returns(uint256 size) {
-        size = address(this).balance;
-
-        uint256 currentDepositScaleFactor = uint256(casper.deposit_scale_factor(casper.current_epoch()));
-        uint256 totalScaledActiveDeposit = 0; //The scaled total amount of ether that is currently used to stake in the casper contract
-        uint256 totalLoggedOutDeposit = 0; //The total amount of ether in the 
-        uint256 totalWithdrawalBoxBalance = 0; //The total balance of the withdrawalboxes
-
-        for(uint256 i = 0; i < stakeManager.withdrawalBoxesLength(); i ++) {
-            AWithdrawalBox withdrawalBox = stakeManager.withdrawalBoxes(i);
-        
-            int128 validatorIndex = casper.validator_indexes(address(withdrawalBox));
-            int128 currentDynasty = casper.dynasty();
-            if(validatorIndex != 0) {
-                int128 scaledDeposit;
-                int128 endDynasty;
-                (scaledDeposit,  endDynasty, , ,) = casper.validators(validatorIndex);
-                if(endDynasty > currentDynasty)
-                    totalScaledActiveDeposit += uint256(scaledDeposit);
-                 else {
-                    int128 endEpoch = getEndEpoch(endDynasty);
-                    totalLoggedOutDeposit += uint256(scaledDeposit * casper.deposit_scale_factor(endEpoch));
-                 }
-            }
-            totalWithdrawalBoxBalance += address(withdrawalBox).balance;          
-        }
-
-        size += totalScaledActiveDeposit * currentDepositScaleFactor;
-        size += totalWithdrawalBoxBalance;
-        return size += totalLoggedOutDeposit;
+        return size = address(this).balance + totalCasperDeposit();
     }
 
     function handleDeposit(address sender, uint256 value) internal {
@@ -109,6 +81,41 @@ contract Treasury is ATreasury {
     function getEndEpoch(int128 endDynasty) internal view returns (int128 endEpoch) {
         return casper.dynasty_start_epoch(endDynasty + 1);
     }
+
+    function totalCasperDeposit() internal view returns (uint256 totalDeposit) {
+        uint256 currentDepositScaleFactor = uint256(casper.deposit_scale_factor(casper.current_epoch()));
+        uint256 totalScaledActiveDeposit = 0; //The scaled total amount of ether that is currently used to stake in the casper contract
+        uint256 totalLoggedOutDeposit = 0; //The total amount of ether in the 
+        uint256 totalWithdrawalBoxBalance = 0; //The total balance of the withdrawalboxes
+
+        int128 currentDynasty = casper.dynasty();
+
+        for(uint256 i = 0; i < stakeManager.withdrawalBoxesLength(); i ++) {
+            AWithdrawalBox withdrawalBox = stakeManager.withdrawalBoxes(i);
+        
+            int128 validatorIndex = casper.validator_indexes(address(withdrawalBox));
+            
+            if(validatorIndex != 0) { // If the validator is currently active
+                int128 scaledDeposit;
+                int128 endDynasty;
+                (scaledDeposit, endDynasty, , ,) = casper.validators(validatorIndex);
+                if(endDynasty >= currentDynasty) // If the validator is not logged out
+                    totalScaledActiveDeposit += uint256(scaledDeposit);
+                else {
+                    int128 endEpoch = getEndEpoch(endDynasty);
+                    totalLoggedOutDeposit += uint256(scaledDeposit * casper.deposit_scale_factor(endEpoch));
+                 }
+            }
+
+            totalWithdrawalBoxBalance += address(withdrawalBox).balance;          
+        }
+
+        return totalDeposit = totalLoggedOutDeposit +
+            totalWithdrawalBoxBalance +
+            totalScaledActiveDeposit * currentDepositScaleFactor;
+
+    }
+
 
     modifier onlyStakeManager() {
         require(msg.sender == address(stakeManager));

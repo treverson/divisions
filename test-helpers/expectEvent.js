@@ -9,16 +9,17 @@ module.exports = async (transaction, event, params, message) => {
         out = await transactionListener.listen(transaction, event, 8000);
         temp = out;
         delete temp.txHash;
+        if (params) {
 
-        for (var key in params) {
-            if (params[key] === '@any' && temp[key]) {
-                delete params[key];
-                deletetempout[key];
+            for (var key in params) {
+                if (params[key] === '@any' && temp[key]) {
+                    delete params[key];
+                    deletetempout[key];
+                }
             }
+
+            assert.deepEqual(temp, params, message);
         }
-
-        assert.deepEqual(temp, params, message);
-
     } catch (err) {
         assert.fail(err.toString());
     } finally {

@@ -22,6 +22,9 @@ contract ACasper {
 
     int128 public dynasty = 0;
 
+    int128 public dynasty_logout_delay;
+    int128 public withdrawal_delay;
+
     mapping(int128 => int128) public dynasty_start_epoch;
 
     mapping(int128 => int128) public dynasty_in_epoch;

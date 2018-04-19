@@ -14,14 +14,23 @@ contract MockCasper is ACasper {
     bytes32 public invalid_vote_message_hash = keccak256(invalid_vote_message_hash);
     bytes32 public invalid_logout_message_hash = keccak256(invalid_logout_message);
 
-    bool rejectNextVote = false;
-    bool rejectNextLogout = false;
+    bool rejectVote = false;
+    bool rejectLogout = false;
 
-    function MockCasper(int128 _min_deposit_size, int128 _epoch_length) public {
+    function MockCasper(
+        int128 _min_deposit_size,
+        int128 _epoch_length,
+        int128 _dynasty_logout_delay,
+        int128 _withdrawal_delay
+    ) 
+        public
+    {
         // current_epoch = int128(block.number) / epoch_length;
 
         min_deposit_size = _min_deposit_size;
         epoch_length = _epoch_length;
+        dynasty_logout_delay = _dynasty_logout_delay;
+        withdrawal_delay = _withdrawal_delay;
         
         deposit_scale_factor[current_epoch] = 10000000000;
     }
@@ -46,25 +55,36 @@ contract MockCasper is ACasper {
     }
 
     function vote(bytes vote_msg) public {
-        require(!rejectNextVote);
+        require(!rejectVote);
         
         emit VoteCalled(vote_msg);
     }
 
     function logout(bytes logout_msg) public {
-        require(!rejectNextLogout);
+        require(!rejectLogout);
 
         emit LogoutCalled(logout_msg);
     }
+
+    function increment_dynasty() public {
+        dynasty++;
+        dynasty_in_epoch[current_epoch] = dynasty;
+        dynasty_start_epoch[dynasty] = current_epoch;
+    }
+
 
     function withdraw(int128 validator_index) public {
         Validator storage validator = validators[validator_index];
         require(validator_indexes[validator.withdrawal_addr] != 0);
         validator_indexes[validator.withdrawal_addr] = 0;
 
+        int128 end_epoch = dynasty_start_epoch[validator.end_dynasty + 1];
+
+        int128 amount = validator.deposit * deposit_scale_factor[end_epoch];
+
         emit WithdrawCalled(validator_index);
-        
-        validator.addr.transfer(uint256(validator.deposit));
+        emit Withdraw(validator.withdrawal_addr, validator_index, amount);
+        validator.withdrawal_addr.transfer(uint256(amount));
 
         delete_validator(validator_index);
     }
@@ -74,13 +94,6 @@ contract MockCasper is ACasper {
         return int128(validator.deposit * deposit_scale_factor[current_epoch]);
     }
 
-    function setRejectNextVote(bool _reject) external {
-        rejectNextVote = _reject;
-    }
-
-    function setRejectNextLogout(bool _reject) external {
-        rejectNextLogout = _reject;
-    }
 
     function delete_validator(int128 validator_index) internal {
         validator_indexes[validators[validator_index].withdrawal_addr] = 0;
@@ -91,6 +104,40 @@ contract MockCasper is ACasper {
             addr: address(0),
             withdrawal_addr: address(0)
         });
+    }
+
+    // These functions are not representing actual casper functions,
+    // but as we are avoiding RLP decodig, 
+    // these are used by unittests
+    function doLogout(int128 validator_index, int128 epoch) external {
+        require(current_epoch >= epoch);
+        int128 end_dynasty = dynasty + dynasty_logout_delay;
+        
+        Validator storage validator = validators[validator_index];
+        require(validator.end_dynasty > end_dynasty);
+        validator.end_dynasty = end_dynasty;
+        emit Logout(validator.withdrawal_addr, validator_index, end_dynasty);
+    }
+
+    function slash(int128 validator_index) external {
+        delete_validator(validator_index);
+    }
+
+    function increment_epoch() external {
+        int128 lastDepositScaleFactor = deposit_scale_factor[current_epoch];
+
+        current_epoch ++;
+        dynasty_in_epoch[current_epoch] = dynasty;
+        deposit_scale_factor[current_epoch] = (lastDepositScaleFactor * 99) / 100;
+    }
+
+    //Some utility functions
+    function setRejectNextVote(bool _reject) external {
+        rejectVote = _reject;
+    }
+
+    function setRejectNextLogout(bool _reject) external {
+        rejectLogout = _reject;
     }
 
     event DepositCalled(address validation_addr, address withdrawal_addr, uint256 amount);
