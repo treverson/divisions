@@ -15,6 +15,7 @@ contract AStakeManager is Ownable {
         uint256 targetEpoch;
         uint256 sourceEpoch;
         uint256 castAt;
+        bool accepted;
     }
 
     struct LogoutMessage {
@@ -55,11 +56,12 @@ contract AStakeManager is Ownable {
         public
         view
         returns (
-            bytes,
-            bytes32,
-            uint256,
-            uint256,
-            uint256
+            bytes messageRLP,
+            bytes32 targetHash,
+            uint256 targetEpoch,
+            uint256 sourceEpoch,
+            uint256 castAt,
+            bool accepted
         );
 
     function logout(
@@ -140,14 +142,15 @@ contract StakeManager is AStakeManager {
         external
         onlyValidator
     {
-        // address(casper).call(bytes4(keccak256("vote(bytes)")));
-        casper.vote(_messageRLP);//TODO do this even if it went wrong
+        bool accepted = address(casper).call(bytes4(keccak256("vote(bytes)")), _messageRLP);
+    
         votes[_validatorIndex][_targetEpoch] = VoteMessage({
             messageRLP: _messageRLP,
             targetHash: _targetHash,
             targetEpoch: _targetEpoch,
             sourceEpoch: _sourceEpoch,
-            castAt: block.number
+            castAt: block.number,
+            accepted: accepted
         });
         emit VoteCast(_messageRLP, _validatorIndex, _targetHash, _targetEpoch, _sourceEpoch);
     }
@@ -156,11 +159,12 @@ contract StakeManager is AStakeManager {
         public
         view
         returns (
-            bytes,
-            bytes32,
-            uint256,
-            uint256,
-            uint256
+            bytes messageRLP,
+            bytes32 targetHash,
+            uint256 targetEpoch,
+            uint256 sourceEpoch,
+            uint256 castAt,
+            bool accepted
         ) 
     {
         VoteMessage storage voteMsg = votes[_validatorIndex][_targetEpoch];
@@ -170,7 +174,8 @@ contract StakeManager is AStakeManager {
             voteMsg.targetHash, 
             voteMsg.targetEpoch,
             voteMsg.sourceEpoch, 
-            voteMsg.castAt
+            voteMsg.castAt,
+            voteMsg.accepted
         );
     }
 

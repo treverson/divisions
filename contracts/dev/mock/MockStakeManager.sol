@@ -58,11 +58,12 @@ contract MockStakeManager is AStakeManager {
         public
         view
         returns (
-            bytes,
-            bytes32,
-            uint256,
-            uint256,
-            uint256
+            bytes messageRLP,
+            bytes32 targetHash,
+            uint256 targetEpoch,
+            uint256 sourceEpoch,
+            uint256 castAt,
+            bool accepted
         ) 
     {
 

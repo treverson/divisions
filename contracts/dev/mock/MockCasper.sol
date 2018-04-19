@@ -25,7 +25,7 @@ contract MockCasper is ACasper {
     ) 
         public
     {
-        // current_epoch = int128(block.number) / epoch_length;
+        // current_epoch = int128(block.number) / epoch_length; //Division by 0
 
         min_deposit_size = _min_deposit_size;
         epoch_length = _epoch_length;
@@ -132,11 +132,11 @@ contract MockCasper is ACasper {
     }
 
     //Some utility functions
-    function setRejectNextVote(bool _reject) external {
+    function setRejectVote(bool _reject) external {
         rejectVote = _reject;
     }
 
-    function setRejectNextLogout(bool _reject) external {
+    function setRejectLogout(bool _reject) external {
         rejectLogout = _reject;
     }
 
