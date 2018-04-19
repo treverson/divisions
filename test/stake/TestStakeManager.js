@@ -31,8 +31,7 @@ contract('StakeManager', async accounts => {
         stakeManager = await StakeManager.new(
             casper.address,
             validator,
-            treasury.address,
-            EPOCHS_BEFORE_LOGOUT
+            treasury.address
         );
 
         await treasury.setStakeManager(stakeManager.address);
@@ -45,118 +44,118 @@ contract('StakeManager', async accounts => {
         await casper.setRejectLogout(false);
     });
 
-    // it('transfers validatorship', async () => {
+    it('transfers validatorship', async () => {
 
-    //     let expectedNewValidator = accounts[8];
-    //     await stakeManager.transferValidatorship(expectedNewValidator);
+        let expectedNewValidator = accounts[8];
+        await stakeManager.transferValidatorship(expectedNewValidator);
 
-    //     let actualNewValidator = await stakeManager.validator();
+        let actualNewValidator = await stakeManager.validator();
 
-    //     assert.equal(actualNewValidator, expectedNewValidator, "The validator was not set correctly");
+        assert.equal(actualNewValidator, expectedNewValidator, "The validator was not set correctly");
 
-    //     await expectThrow(stakeManager.transferValidatorship(0),
-    //         "Cannot set the validator to address 0x0"
-    //     );
+        await expectThrow(stakeManager.transferValidatorship(0),
+            "Cannot set the validator to address 0x0"
+        );
 
-    //     await expectThrow(
-    //         stakeManager.transferValidatorship(accounts[3], { from: accounts[2] }),
-    //         "Cannot set the validator from an account that is not the owner"
-    //     );
-    // });
+        await expectThrow(
+            stakeManager.transferValidatorship(accounts[3], { from: accounts[2] }),
+            "Cannot set the validator from an account that is not the owner"
+        );
+    });
 
-    // it('logs an event on transferValidatorship', async () => {
-    //     let oldValidator = await stakeManager.validator();
-    //     let newValidator = accounts[8];
+    it('logs an event on transferValidatorship', async () => {
+        let oldValidator = await stakeManager.validator();
+        let newValidator = accounts[8];
 
-    //     expectEvent(
-    //         stakeManager.transferValidatorship.sendTransaction(newValidator),
-    //         stakeManager.ValidatorshipTransferred(),
-    //         { oldValidator: oldValidator, newValidator: newValidator }
-    //     );
-    // });
+        expectEvent(
+            stakeManager.transferValidatorship.sendTransaction(newValidator),
+            stakeManager.ValidatorshipTransferred(),
+            { oldValidator: oldValidator, newValidator: newValidator }
+        );
+    });
 
-    // it('sets the treasury', async () => {
-    //     let expectedNewTreasury = accounts[7];
+    it('sets the treasury', async () => {
+        let expectedNewTreasury = accounts[7];
 
-    //     await stakeManager.setTreasury(expectedNewTreasury);
+        await stakeManager.setTreasury(expectedNewTreasury);
 
-    //     let actualNewTreasury = await stakeManager.treasury();
-    //     assert.equal(actualNewTreasury, expectedNewTreasury, "The treasury was not set correctly");
+        let actualNewTreasury = await stakeManager.treasury();
+        assert.equal(actualNewTreasury, expectedNewTreasury, "The treasury was not set correctly");
 
-    //     await expectThrow(stakeManager.setTreasury(0), "Cannot set the treasury to address 0x0");
-    //     await expectThrow(
-    //         stakeManager.setTreasury(accounts[2], { from: accounts[1] }),
-    //         "Cannot set the treasury from an account that is not the owner"
-    //     );
-    // });
+        await expectThrow(stakeManager.setTreasury(0), "Cannot set the treasury to address 0x0");
+        await expectThrow(
+            stakeManager.setTreasury(accounts[2], { from: accounts[1] }),
+            "Cannot set the treasury from an account that is not the owner"
+        );
+    });
 
-    // it('logs an event on setTreasury', async () => {
-    //     let oldTreasury = await stakeManager.treasury();
-    //     let newTreasury = accounts[6];
+    it('logs an event on setTreasury', async () => {
+        let oldTreasury = await stakeManager.treasury();
+        let newTreasury = accounts[6];
 
-    //     await expectEvent(
-    //         stakeManager.setTreasury.sendTransaction(newTreasury),
-    //         stakeManager.TreasurySet(),
-    //         { oldTreasury: oldTreasury, newTreasury: newTreasury }
-    //     );
-    // });
+        await expectEvent(
+            stakeManager.setTreasury.sendTransaction(newTreasury),
+            stakeManager.TreasurySet(),
+            { oldTreasury: oldTreasury, newTreasury: newTreasury }
+        );
+    });
 
-    // it('decides how much ether can be staked', async () => {
-    //     let depositedWei = web3.toWei(2, 'ether');
-    //     await treasury.sendTransaction({ value: depositedWei, from: accounts[8] });
+    it('decides how much ether can be staked', async () => {
+        let depositedWei = web3.toWei(2, 'ether');
+        await treasury.sendTransaction({ value: depositedWei, from: accounts[8] });
 
-    //     // StakeManager can deploy withdrawalBoxes as soon as there's enough ether available
+        // StakeManager can deploy withdrawalBoxes as soon as there's enough ether available
 
-    //     // As of now, it stakes all ether that in currently in the treasury
-    //     let treasuryBalance = await web3.eth.getBalance(treasury.address);
-    //     let stakeAmount = await stakeManager.getStakeAmount();
+        // As of now, it stakes all ether that in currently in the treasury
+        let treasuryBalance = await web3.eth.getBalance(treasury.address);
+        let stakeAmount = await stakeManager.getStakeAmount();
 
-    //     assert.deepEqual(
-    //         stakeAmount,
-    //         treasuryBalance,
-    //         "The stake amount was not equal to the balance of the treasury"
-    //     );
-    // });
+        assert.deepEqual(
+            stakeAmount,
+            treasuryBalance,
+            "The stake amount was not equal to the balance of the treasury"
+        );
+    });
 
-    // it('makes casper deposits', async () => {
-    //     await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[8] });
+    it('makes casper deposits', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[8] });
 
-    //     let numWithdrawalBoxesBefore = await stakeManager.withdrawalBoxesLength();
+        let numWithdrawalBoxesBefore = await stakeManager.withdrawalBoxesLength();
 
-    //     let stakeAmount = await stakeManager.getStakeAmount();
+        let stakeAmount = await stakeManager.getStakeAmount();
 
-    //     await expectEvent(
-    //         stakeManager.makeStakeDeposit.sendTransaction(),
-    //         treasury.StakeCalled(),
-    //         {
-    //             amount: stakeAmount,
-    //             validatorAddress: validator,
-    //             withdrawalBox: '@any'
-    //         }
-    //     );
+        await expectEvent(
+            stakeManager.makeStakeDeposit.sendTransaction(),
+            treasury.StakeCalled(),
+            {
+                amount: stakeAmount,
+                validatorAddress: validator,
+                withdrawalBox: '@any'
+            }
+        );
 
-    //     let numWithdrawalBoxesAfter = await stakeManager.withdrawalBoxesLength();
+        let numWithdrawalBoxesAfter = await stakeManager.withdrawalBoxesLength();
 
-    //     assert.deepEqual(
-    //         numWithdrawalBoxesAfter,
-    //         numWithdrawalBoxesBefore.plus(1),
-    //         "The number of withdrawalboxes was not incremented"
-    //     );
-    // });
+        assert.deepEqual(
+            numWithdrawalBoxesAfter,
+            numWithdrawalBoxesBefore.plus(1),
+            "The number of withdrawalboxes was not incremented"
+        );
+    });
 
-    // it('logs an event on makeStakeDeposit', async () => {
-    //     await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
+    it('logs an event on makeStakeDeposit', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
 
-    //     let nextValidatorIndex = await casper.next_validator_index();
+        let nextValidatorIndex = await casper.next_validator_index();
 
-    //     await expectEvent(
-    //         stakeManager.makeStakeDeposit.sendTransaction(),
-    //         stakeManager.WithdrawalBoxDeployed(),
-    //         {
-    //             withdrawalBox: '@any',
-    //         }
-    //     );
-    // });
+        await expectEvent(
+            stakeManager.makeStakeDeposit.sendTransaction(),
+            stakeManager.WithdrawalBoxDeployed(),
+            {
+                withdrawalBox: '@any',
+            }
+        );
+    });
 
     it('forwards votes to casper and stores them alongside their unencoded parameters', async () => {
         await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
@@ -237,161 +236,161 @@ contract('StakeManager', async accounts => {
         )
     });
 
-    // it('only lets the validator cast votes', async () => {
-    //     await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[4] });
+    it('only lets the validator cast votes', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[4] });
 
-    //     await stakeManager.makeStakeDeposit();
+        await stakeManager.makeStakeDeposit();
 
-    //     let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
-    //     let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
-    //     let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+        let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
-    //     let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
 
-    //     let messageRLP = "iwannavote";
-    //     let targetHash = "targetHash";
-    //     let targetEpoch = 100;
-    //     let sourceEpoch = 101;
+        let messageRLP = "iwannavote";
+        let targetHash = "targetHash";
+        let targetEpoch = 100;
+        let sourceEpoch = 101;
 
-    //     await expectThrow(
-    //         stakeManager.vote(
-    //             messageRLP,
-    //             validatorIndex,
-    //             targetHash,
-    //             targetEpoch,
-    //             sourceEpoch,
-    //         ),
-    //         "Only the validator can cast votes"
-    //     )
-    // });
+        await expectThrow(
+            stakeManager.vote(
+                messageRLP,
+                validatorIndex,
+                targetHash,
+                targetEpoch,
+                sourceEpoch,
+            ),
+            "Only the validator can cast votes"
+        )
+    });
 
-    // it('logs an event on vote', async () => {
-    //     await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
+    it('logs an event on vote', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[7] });
 
-    //     await stakeManager.makeStakeDeposit();
+        await stakeManager.makeStakeDeposit();
 
-    //     let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
-    //     let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
-    //     let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+        let withdrawalBox = await AWithdrawalBox.at(withdrawalBoxAddress);
 
-    //     let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
 
-    //     let messageRLP = "iwannavote";
-    //     let targetHash = "targetHash";
-    //     let targetEpoch = 100;
-    //     let sourceEpoch = 101;
+        let messageRLP = "iwannavote";
+        let targetHash = "targetHash";
+        let targetEpoch = 100;
+        let sourceEpoch = 101;
 
-    //     await expectEvent(
-    //         stakeManager.vote.sendTransaction(
-    //             messageRLP,
-    //             validatorIndex,
-    //             targetHash,
-    //             targetEpoch,
-    //             sourceEpoch,
-    //             { from: validator }
-    //         ),
-    //         stakeManager.VoteCast(),
-    //         {
-    //             messageRLP: web3.toHex(messageRLP),
-    //             validatorIndex: web3.toBigNumber(validatorIndex),
-    //             targetHash: web3.fromAscii(targetHash).padEnd(66, '0'), // = 8 bytes + '0x'
-    //             targetEpoch: web3.toBigNumber(targetEpoch),
-    //             sourceEpoch: web3.toBigNumber(sourceEpoch)
-    //         }
-    //     );
-    // });
+        await expectEvent(
+            stakeManager.vote.sendTransaction(
+                messageRLP,
+                validatorIndex,
+                targetHash,
+                targetEpoch,
+                sourceEpoch,
+                { from: validator }
+            ),
+            stakeManager.VoteCast(),
+            {
+                messageRLP: web3.toHex(messageRLP),
+                validatorIndex: web3.toBigNumber(validatorIndex),
+                targetHash: web3.fromAscii(targetHash).padEnd(66, '0'), // = 8 bytes + '0x'
+                targetEpoch: web3.toBigNumber(targetEpoch),
+                sourceEpoch: web3.toBigNumber(sourceEpoch)
+            }
+        );
+    });
 
-    // it('forwards logout messages to casper and stores them alongside their unencoded parameters', async () => {
-    //     await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
+    it('forwards logout messages to casper and stores them alongside their unencoded parameters', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
-    //     await stakeManager.makeStakeDeposit();
+        await stakeManager.makeStakeDeposit();
 
-    //     let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
-    //     let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
-    //     let logoutMessageRLP = web3.toHex("iwannalogout");
-    //     let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
-    //     let epoch = web3.toBigNumber(100);
+        let logoutMessageRLP = web3.toHex("iwannalogout");
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let epoch = web3.toBigNumber(100);
 
-    //     await expectEvent(
-    //         stakeManager.logout.sendTransaction(
-    //             withdrawalBoxAddress,
-    //             logoutMessageRLP,
-    //             validatorIndex,
-    //             epoch
-    //         ),
-    //         casper.LogoutCalled(),
-    //         {
-    //             logout_msg: logoutMessageRLP
-    //         }
-    //     );
+        await expectEvent(
+            stakeManager.logout.sendTransaction(
+                withdrawalBoxAddress,
+                logoutMessageRLP,
+                validatorIndex,
+                epoch
+            ),
+            casper.LogoutCalled(),
+            {
+                logout_msg: logoutMessageRLP
+            }
+        );
 
-    //     let logoutMessage = new LogoutMessage(await stakeManager.logoutMessages(withdrawalBoxAddress));
-    //     delete logoutMessage.setAt;
-    //     assert.deepEqual(
-    //         logoutMessage,
-    //         {
-    //             messageRLP: logoutMessageRLP,
-    //             validatorIndex: validatorIndex,
-    //             epoch: epoch
-    //         },
-    //         "The logout message was not stored correctly"
-    //     );
-    // });
+        let logoutMessage = new LogoutMessage(await stakeManager.logoutMessages(withdrawalBoxAddress));
+        delete logoutMessage.setAt;
+        assert.deepEqual(
+            logoutMessage,
+            {
+                messageRLP: logoutMessageRLP,
+                validatorIndex: validatorIndex,
+                epoch: epoch
+            },
+            "The logout message was not stored correctly"
+        );
+    });
 
-    // it('reverts logouts when casper rejects the message', async () => {
-    //     await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
+    it('reverts logouts when casper rejects the message', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
-    //     await stakeManager.makeStakeDeposit();
+        await stakeManager.makeStakeDeposit();
 
-    //     let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
-    //     let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
-    //     let invalidLogoutMessageRLP = "invalidlogout";
-    //     let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
-    //     let epoch = web3.toBigNumber(100);
+        let invalidLogoutMessageRLP = "invalidlogout";
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let epoch = web3.toBigNumber(100);
 
-    //     await casper.setRejectLogout(true);
+        await casper.setRejectLogout(true);
 
-    //     await expectThrow(
-    //         stakeManager.logout(
-    //             withdrawalBoxAddress,
-    //             invalidLogoutMessageRLP,
-    //             validatorIndex,
-    //             epoch
-    //         ),
-    //         "It should only accept logouts accepted by casper"
-    //     );
-    // });
+        await expectThrow(
+            stakeManager.logout(
+                withdrawalBoxAddress,
+                invalidLogoutMessageRLP,
+                validatorIndex,
+                epoch
+            ),
+            "It should only accept logouts accepted by casper"
+        );
+    });
 
-    // it('logs an event on logout', async () => {
-    //     await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
+    it('logs an event on logout', async () => {
+        await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
-    //     await stakeManager.makeStakeDeposit();
+        await stakeManager.makeStakeDeposit();
 
-    //     let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
-    //     let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
+        let lastWithdrawalBoxIndex = (await stakeManager.withdrawalBoxesLength()).minus(1);
+        let withdrawalBoxAddress = await stakeManager.withdrawalBoxes(lastWithdrawalBoxIndex);
 
-    //     let logoutMessageRLP = web3.toHex("iwannalogout");
-    //     let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
-    //     let epoch = web3.toBigNumber(100);
+        let logoutMessageRLP = web3.toHex("iwannalogout");
+        let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
+        let epoch = web3.toBigNumber(100);
 
-    //     await expectEvent(
-    //         stakeManager.logout.sendTransaction(
-    //             withdrawalBoxAddress,
-    //             logoutMessageRLP,
-    //             validatorIndex,
-    //             epoch
-    //         ),
-    //         stakeManager.Logout(),
-    //         {
-    //             withdrawalBox: withdrawalBoxAddress,
-    //             messageRLP: logoutMessageRLP,
-    //             validatorIndex: validatorIndex,
-    //             epoch: epoch
-    //         }
-    //     );
-    // });
+        await expectEvent(
+            stakeManager.logout.sendTransaction(
+                withdrawalBoxAddress,
+                logoutMessageRLP,
+                validatorIndex,
+                epoch
+            ),
+            stakeManager.Logout(),
+            {
+                withdrawalBox: withdrawalBoxAddress,
+                messageRLP: logoutMessageRLP,
+                validatorIndex: validatorIndex,
+                epoch: epoch
+            }
+        );
+    });
 });
 
 class VoteMessage {

@@ -7,15 +7,33 @@ let transactionListener = new TransactionListener();
 const Exchange = artifacts.require('Exchange');
 const MockDivisionsToken = artifacts.require('MockDivisionsToken');
 const MockStakeManager = artifacts.require('MockStakeManager');
+const MockTreasury = artifacts.require('MockTreasury');
+const MockCasper = artifacts.require('MockCasper');
+
+const MIN_DEPOSIT_SIZE = web3.toWei(1, 'ether');
+const EPOCH_LENGTH = 20;
+const EPOCHS_BEFORE_LOGOUT = 10;
+const DYNASTY_LOGOUT_DELAY = 0;
+const WITHDRAWAL_DELAY = 0;
+
 
 contract('Exchange', async accounts => {
     let exchange;
     let divToken;
     let stakeManager;
+    let casper;
+    let treasury;
+    let validator;
 
     before(async () => {
+        validator = accounts[1];
+        casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
+        treasury = await MockTreasury.new(casper.address);
+        stakeManager = await MockStakeManager.new(casper.address, treasury.address);
+        
+        await treasury.setStakeManager(stakeManager.address);
+        
         divToken = await MockDivisionsToken.new();
-        stakeManager = await MockStakeManager.new();
         exchange = await Exchange.new(divToken.address, stakeManager.address);
     });
 

@@ -25,8 +25,6 @@ contract AStakeManager is Ownable {
         uint256 setAt;
     }
 
-    uint8 public epochsBeforeLogout;
-
     address public validator;
     ACasper public casper;
     ATreasury public treasury;
@@ -86,16 +84,13 @@ contract StakeManager is AStakeManager {
     function StakeManager(
         ACasper _casper,
         address _validator,
-        ATreasury _treasury,
-        uint8 _epochsBeforeLogout
+        ATreasury _treasury
     ) 
         public 
     {
-        
         casper = _casper;
         validator = _validator;
         treasury = _treasury;
-        epochsBeforeLogout = _epochsBeforeLogout;
     }    
     
     function withdrawalBoxesLength() external view returns (uint256 length) {
@@ -191,9 +186,7 @@ contract StakeManager is AStakeManager {
             validatorIndex: _validatorIndex,
             epoch: _epoch,
             setAt: block.number
-        });
-
-        
+        });     
 
         casper.logout(_messageRLP);
 

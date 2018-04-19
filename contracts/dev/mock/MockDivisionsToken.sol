@@ -22,4 +22,10 @@ contract MockDivisionsToken is ADivisionsToken {
         
         minter = _minter;
     }
+    
+    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool success) {
+        approve(_spender, _value);
+        _spender.receiveApproval(msg.sender, _value, address(this), _extraData);
+        return success = true;
+    }
 }

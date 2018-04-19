@@ -29,20 +29,17 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     uint256 public sellOrderCursor;
     mapping(address => uint256[]) sellOrderIndexes;
 
-    function buyOrdersLength() public view returns (uint256);
-    function sellOrdersLength() public view returns (uint256);
+    function buyOrdersLength() public view returns (uint256 length);
+    function sellOrdersLength() public view returns (uint256 length);
 
-    function weiReserve() public view returns (uint256);
-    function divReserve() public view returns (uint256);
+    function weiReserve() public view returns (uint256 reserve);
+    function divReserve() public view returns (uint256 reserve);
 
     function placeBuyOrder() payable external;
     function placeSellOrder(uint256 _amount) external;
 
-    function canFillBuyOrderAmount(uint256 _index) public view returns (uint256);
-    function canFillSellOrderAmount(uint256 _index) public view returns (uint256);
-
-    function getBuyOrder(uint256 _index) external view returns (address, uint256, uint256, uint256);
-    function getSellOrder(uint256 _index) external view returns (address, uint256, uint256, uint256);
+    function canFillBuyOrderAmount(uint256 _index) public view returns (uint256 amount);
+    function canFillSellOrderAmount(uint256 _index) public view returns (uint256 amount);
 
     function fillBuyOrder(uint256 _index) external;
     function fillSellOrder(uint256 _index) external;

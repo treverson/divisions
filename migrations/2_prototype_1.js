@@ -8,7 +8,6 @@ let StakeManager = artifacts.require('StakeManager');
 
 const minDepositSize = web3.toWei(1, 'ether');
 const epochLength = 20;
-const epochsBeforeLogout = 10;
 
 const dynastyLogoutDelay = 0;
 const withdrawalDelay = 0;
@@ -31,8 +30,7 @@ module.exports = async deployer => {
             StakeManager,
             MockCasper.address,
             validator,
-            Treasury.address,
-            epochsBeforeLogout
+            Treasury.address
         );
 
         let deployedTreasury = Treasury.at(Treasury.address);
