@@ -11,6 +11,8 @@ const MockCasper = artifacts.require('MockCasper');
 const MIN_DEPOSIT_SIZE = web3.toWei(1, 'ether');
 const EPOCH_LENGTH = 20;
 const EPOCHS_BEFORE_LOGOUT = 10;
+const DYNASTY_LOGOUT_DELAY = 0;
+const WITHDRAWAL_DELAY = 0;
 
 contract('StakeManager', async accounts => {
     let casper;
@@ -22,7 +24,7 @@ contract('StakeManager', async accounts => {
 
         validator = accounts[9];
 
-        casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH);
+        casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
 
         treasury = await MockTreasury.new(casper.address);
 

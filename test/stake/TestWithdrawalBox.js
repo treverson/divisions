@@ -37,17 +37,6 @@ contract('WithdrawalBox', async accounts => {
         );
     });
 
-    it('stores the epoch at which it was logged out', async () => {
-        let logoutEpoch = web3.toBigNumber(200);
-        await withdrawalBox.setLogoutEpoch(logoutEpoch);
-
-        assert.deepEqual(
-            await withdrawalBox.logoutEpoch(),
-            logoutEpoch,
-            "The logout epoch was not stored"
-        );
-    });
-
     it('logs an event on sweep', async () => {
         let withdrawalBoxBalance = await web3.eth.getBalance(withdrawalBox.address);
         await expectEvent(
