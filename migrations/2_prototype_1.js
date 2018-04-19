@@ -35,12 +35,15 @@ module.exports = async deployer => {
             epochsBeforeLogout
         );
 
+        let deployedTreasury = Treasury.at(Treasury.address);
+        await deployedTreasury.setStakeManager(StakeManager.address);
+
         let addresses = {
             casper: MockCasper.address,
             treasury: Treasury.address,
             stakeManager: StakeManager.address
         };
-
+        
         let addressesJson = JSON.stringify(addresses);
         fs.writeFileSync(ADDRESS_JSON_PATH_P1, addressesJson);
     } catch (err) {
