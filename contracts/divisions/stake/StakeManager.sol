@@ -6,6 +6,7 @@ import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 import "./Treasury.sol";
 import "./WithdrawalBox.sol";
 import "./ACasper.sol";
+import "../exchange/Exchange.sol";
 
 contract AStakeManager is Ownable {
     
@@ -28,6 +29,7 @@ contract AStakeManager is Ownable {
     address public validator;
     ACasper public casper;
     ATreasury public treasury;
+    AExchange public exchange;
 
     mapping(uint256 => mapping(uint256 => VoteMessage)) votes;
     mapping(address => LogoutMessage) public logoutMessages;
@@ -37,6 +39,7 @@ contract AStakeManager is Ownable {
 
     function transferValidatorship(address _validator) external onlyOwner();
     function setTreasury(ATreasury _treasury) external onlyOwner();
+    function setExchange(AExchange _exchange) external onlyOwner();
 
     function getStakeAmount() public view returns (uint256 amount);
     function makeStakeDeposit() external;
@@ -72,7 +75,8 @@ contract AStakeManager is Ownable {
 
 
     event ValidatorshipTransferred(address indexed oldValidator, address indexed newValidator);
-    event TreasurySet(address indexed oldTreasury, address indexed newTreasury);
+    event TreasurySet(ATreasury indexed oldTreasury, ATreasury indexed newTreasury);
+    event ExchangeSet(AExchange indexed oldExchange, AExchange indexed newExchange);
     event WithdrawalBoxDeployed(AWithdrawalBox indexed withdrawalBox);
     event VoteCast(bytes messageRLP, uint256 validatorIndex, bytes32 targetHash, uint256 targetEpoch, uint256 sourceEpoch);
     event Logout(AWithdrawalBox indexed withdrawalBox, bytes messageRLP, uint256 validatorIndex, uint256 epoch);
@@ -109,6 +113,12 @@ contract StakeManager is AStakeManager {
         treasury = _treasury;
     }
 
+    function setExchange(AExchange _exchange) external onlyOwner() {
+        require(_exchange != address(0));
+        emit ExchangeSet(exchange, _exchange);
+        exchange = _exchange;
+    }
+
     function getStakeAmount() public view returns (uint256 amount) {
         // TODO implement actual calculation
         return amount = address(treasury).balance;
@@ -137,8 +147,9 @@ contract StakeManager is AStakeManager {
         external
         onlyValidator
     {
+        // To store the vote even when it's rejected, use low-level call
         bool accepted = address(casper).call(bytes4(keccak256("vote(bytes)")), _messageRLP);
-    
+        
         votes[_validatorIndex][_targetEpoch] = VoteMessage({
             messageRLP: _messageRLP,
             targetHash: _targetHash,

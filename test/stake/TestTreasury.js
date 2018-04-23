@@ -92,6 +92,14 @@ contract('Treasury', async accounts => {
         );
     });
 
+    it('sends ether to the exchange when nessecary', async () => {
+        assert.fail('TODO');
+    });
+
+    it('logs an event on sendToExchange()', async () => {
+        assert.fail('TODO');
+    });
+
     it('logs an event on deposit', async () => {
         let investedWei = web3.toBigNumber(web3.toWei(3, 'ether'));
 

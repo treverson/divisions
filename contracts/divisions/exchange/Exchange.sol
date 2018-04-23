@@ -2,6 +2,7 @@ pragma solidity 0.4.21;
 
 import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/payment/PullPayment.sol";
+import "../../../node_modules/zeppelin-solidity/contracts/math/Math.sol";
 
 import "../stake/Treasury.sol";
 import "../stake/StakeManager.sol";
@@ -29,6 +30,9 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     uint256 public sellOrderCursor;
     mapping(address => uint256[]) sellOrderIndexes;
 
+    uint256 public totalDivFilled;
+    uint256 public totalWeiFilled;
+
     function buyOrdersLength() public view returns (uint256 length);
     function sellOrdersLength() public view returns (uint256 length);
 
@@ -38,8 +42,8 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     function placeBuyOrder() payable external;
     function placeSellOrder(uint256 _amount) external;
 
-    function canFillBuyOrderAmount(uint256 _index) public view returns (uint256 amount);
-    function canFillSellOrderAmount(uint256 _index) public view returns (uint256 amount);
+    function buyOrderFillableAmount(uint256 _index) public view returns (uint256 amount);
+    function sellOrderFillableAmount(uint256 _index) public view returns (uint256 amount);
 
     function getBuyOrderIndexes(address _buyer) public view returns (uint256[] indexes);
     function getSellOrderIndexes(address _seller) public view returns (uint256[] indexes);
@@ -51,7 +55,7 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     function toDiv(uint256 _weiAmount) public view returns (uint256 divAmount);
     function toWei(uint256 _divAmount) public view returns (uint256 weiAmount);
 
-    function transferWeiToTreasury(uint256 amount) external;
+    function transferWeiToTreasury(uint256 _amount) external;
     function handleDepositFromTreasury() external payable;
 
     event BuyOrderPlaced(uint256 index, address sender, uint256 amount);
@@ -72,6 +76,8 @@ contract Exchange is AExchange {
         divToken = _divToken;
         stakeManager = _stakeManager;
         treasury = _stakeManager.treasury();
+        totalDivFilled = 0;
+        totalWeiFilled = 0;
     }
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
@@ -86,11 +92,12 @@ contract Exchange is AExchange {
         return sellOrders.length;
     }
 
-    function weiReserve() public view returns (uint256) {
-        return address(this).balance.sub(totalPayments);
+    function weiReserve() public view returns (uint256 reserve) {
+        return reserve = address(this).balance.sub(totalPayments);
     }
-    function divReserve() public view returns (uint256) {
-        return divToken.balanceOf(address(this));
+
+    function divReserve() public view returns (uint256 reserve) {
+        return reserve = divToken.balanceOf(address(this));
     }
 
     function placeBuyOrder() payable external {
@@ -127,11 +134,12 @@ contract Exchange is AExchange {
         emit SellOrderPlaced(buyOrders.length - 1, _sender, _amount);
     }
 
-    function canFillBuyOrderAmount(uint256 _index) public view returns (uint256) {
-        return 0;
+    function buyOrderFillableAmount(uint256 _index) public view returns (uint256 amount) {
+        Order storage buyOrder = buyOrders[_index];
+        return amount = Math.min256(toWei(divReserve() + totalDivFilled) - buyOrder.cumulativeAmount, buyOrder.amount);
     }
 
-    function canFillSellOrderAmount(uint256 _index) public view returns (uint256) {
+    function sellOrderFillableAmount(uint256 _index) public view returns (uint256 amount) {
         return 0;
     }
 
@@ -181,9 +189,10 @@ contract Exchange is AExchange {
         return weiAmount = _divAmount.mul(divPrice()).div(priceMultiplier);
     }
 
-    function transferWeiToTreasury(uint256 amount) external {
-
+    function transferWeiToTreasury(uint256 _amount) external {
+        // treasury.deposit.value(_amount)();
     }
+
     function handleDepositFromTreasury() external payable {
         
     }

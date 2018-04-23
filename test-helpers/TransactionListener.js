@@ -14,7 +14,8 @@ module.exports = class {
     
     listen(transaction, event, timeoutMs) {
         if(event) this.bind(event);
-
+        if(!timeoutMs) timeoutMs = 5000;
+        
         let p =  new Promise((resolve, reject) => {
             transaction.then((txHash) => {
                 eventHandlers[txHash] = (args) => {

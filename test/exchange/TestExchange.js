@@ -2,6 +2,7 @@ const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 let TransactionListener = require('../../test-helpers/TransactionListener');
 let transactionListener = new TransactionListener();
+const BigNumber =  require('bignumber.js');
 // ============ Test Exchange ============ //
 
 const Exchange = artifacts.require('Exchange');
@@ -209,7 +210,40 @@ contract('Exchange', async accounts => {
     // });
 
     it('calculates the amount that can be filled of a buy order ', async () => {
-        assert.fail('TODO');
+        await treasury.setTotalPoolSize(web3.toWei(400, 'ether'));
+
+        await divToken.mint(exchange.address, 10 * 10 ** 18);
+        let divReserve = await exchange.divReserve();
+        let divReserveInWei = await exchange.toWei(divReserve);
+        let totalDivFilled = await exchange.totalDivFilled();
+        let totalDivFilledinWei = await exchange.toWei(totalDivFilled);
+
+        let out = await transactionListener.listen(
+            exchange.placeBuyOrder.sendTransaction({
+                value: web3.toWei(3, 'ether'),
+                from: accounts[5]
+            }),
+            exchange.BuyOrderPlaced()
+        );
+
+        let buyOrder = new Order(await exchange.buyOrders(out.index));
+
+
+        let minFillableAmount = divReserveInWei
+            .plus(totalDivFilledinWei)
+            .minus(buyOrder.cumulativeAmount);
+
+        let actualFillableAmount = await exchange.buyOrderFillableAmount(out.index);
+
+        let expectedFillableAmount = BigNumber.min(minFillableAmount, buyOrder.amount);
+
+        assert.deepEqual(
+            actualFillableAmount,
+            expectedFillableAmount,
+            "The fillable amount was not correct"
+        );
+
+        transactionListener.dispose();
     });
 
     // it('calculates the amount that can be filled of a sell order', async () => {

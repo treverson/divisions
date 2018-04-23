@@ -106,8 +106,10 @@ contract('StakeManager', async accounts => {
 
         // StakeManager can deploy withdrawalBoxes as soon as there's enough ether available
 
-        // As of now, it stakes all ether that in currently in the treasury
+        
         let treasuryBalance = await web3.eth.getBalance(treasury.address);
+        assert.fail('TODO: incorporate exchange.weiReserve() into the calculation');
+
         let stakeAmount = await stakeManager.getStakeAmount();
 
         assert.deepEqual(
@@ -141,6 +143,14 @@ contract('StakeManager', async accounts => {
             numWithdrawalBoxesBefore.plus(1),
             "The number of withdrawalboxes was not incremented"
         );
+    });
+
+    it('has the exchange deposit ether with the treasury if nessecary on makeStakeDeposit()', async () => {
+        assert.fail('TODO');
+    });
+
+    it('has the treasury send ether to the exchange if nessecary', async () =>{
+        assert.fail('TODO');
     });
 
     it('logs an event on makeStakeDeposit', async () => {
@@ -338,7 +348,7 @@ contract('StakeManager', async accounts => {
         );
     });
 
-    it('reverts logouts when casper rejects the message', async () => {
+    it('reverts storing logout messages when casper rejects them', async () => {
         await treasury.sendTransaction({ value: MIN_DEPOSIT_SIZE, from: accounts[6] });
 
         await stakeManager.makeStakeDeposit();
@@ -388,6 +398,40 @@ contract('StakeManager', async accounts => {
                 messageRLP: logoutMessageRLP,
                 validatorIndex: validatorIndex,
                 epoch: epoch
+            }
+        );
+    });
+
+    it('sets the exchange', async () => {
+        let exchange = accounts[9];
+
+        await stakeManager.setExchange(exchange);
+
+        let newExchange = await stakeManager.exchange();
+
+        assert.equal(newExchange, exchange, "The exchange was not set");
+
+        await expectThrow(
+            stakeManager.setExchange(accounts[8], {from: accounts[1]}),
+            "Only the owner can set the exchange"
+        );
+
+        await expectThrow(
+            stakeManager.setExchange(0),
+            "Cannot set the exchange to address 0x0"
+        );
+    });
+
+    it('throws an event when the exchange is set', async () => {
+        let newExchange = accounts[7];
+        let oldExchange = await stakeManager.exchange();
+
+        await expectEvent(
+            stakeManager.setExchange.sendTransaction(newExchange),
+            stakeManager.ExchangeSet(),
+            {
+                oldExchange: oldExchange,
+                newExchange: newExchange
             }
         );
     });

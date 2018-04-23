@@ -19,6 +19,7 @@ contract MockTreasury is ATreasury {
         _to.transfer(_amount);
     }
     function deposit() external payable {
+        emit DepositCalled(msg.sender, msg.value);
     }
 
     function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external {
@@ -37,6 +38,7 @@ contract MockTreasury is ATreasury {
         totalPoolSize_ = _size;
     }
 
+    event DepositCalled(address from, uint256 value);
     event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox);
     event SweepCalled(AWithdrawalBox withdrawalBox);
 }

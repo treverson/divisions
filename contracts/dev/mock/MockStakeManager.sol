@@ -37,9 +37,9 @@ contract MockStakeManager is AStakeManager {
 
         emit WithdrawalBoxDeployed(withdrawalBox);
     }
-    
-    function setLogoutMessage(AWithdrawalBox _withdrawalBox, bytes _messageRLP, uint256 _validatorIndex, uint256 _epoch) external {
-        
+
+    function setExchange(AExchange _exchange) external {
+        exchange = _exchange;
     }
     
     function vote(
