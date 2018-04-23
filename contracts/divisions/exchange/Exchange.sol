@@ -41,6 +41,9 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     function canFillBuyOrderAmount(uint256 _index) public view returns (uint256 amount);
     function canFillSellOrderAmount(uint256 _index) public view returns (uint256 amount);
 
+    function getBuyOrderIndexes(address _buyer) public view returns (uint256[] indexes);
+    function getSellOrderIndexes(address _seller) public view returns (uint256[] indexes);
+
     function fillBuyOrder(uint256 _index) external;
     function fillSellOrder(uint256 _index) external;
 
@@ -73,7 +76,7 @@ contract Exchange is AExchange {
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
         require(_token == address(divToken));
-        //TODO
+        placeSellOrder(_value, _from);
     }
 
     function buyOrdersLength() public view returns (uint256) {
@@ -105,19 +108,23 @@ contract Exchange is AExchange {
     }
 
     function placeSellOrder(uint256 _amount) external {
+        placeSellOrder(_amount, msg.sender);
+    }
+
+    function placeSellOrder(uint256 _amount, address _sender) internal {
         require(_amount > 0);
-        divToken.transferFrom(msg.sender, address(this), _amount);
+        divToken.transferFrom(_sender, address(this), _amount);
 
         sellOrders.push(Order ({
-            sender: msg.sender,
+            sender: _sender,
             amount: _amount,
             cumulativeAmount: lastBuyOrderCumulativeAmount().add(_amount),
             amountFilled: 0
         }));
 
-        sellOrderIndexes[msg.sender].push(sellOrders.length - 1);
+        sellOrderIndexes[_sender].push(sellOrders.length - 1);
 
-        emit SellOrderPlaced(buyOrders.length - 1, msg.sender, _amount);
+        emit SellOrderPlaced(buyOrders.length - 1, _sender, _amount);
     }
 
     function canFillBuyOrderAmount(uint256 _index) public view returns (uint256) {
@@ -128,11 +135,11 @@ contract Exchange is AExchange {
         return 0;
     }
 
-    function getBuyOrderIndexes(address _buyer) public view returns (uint256[]) {
+    function getBuyOrderIndexes(address _buyer) public view returns (uint256[] indexes) {
         return buyOrderIndexes[_buyer];
     }
 
-    function getSellOrderIndexes(address _seller) public view returns (uint256[]) {
+    function getSellOrderIndexes(address _seller) public view returns (uint256[] indexes) {
         return sellOrderIndexes[_seller];
     }
 
@@ -190,5 +197,4 @@ contract Exchange is AExchange {
         if(sellOrders.length == 0) return amount = 0;
         else return amount = sellOrders[sellOrders.length - 1].cumulativeAmount;
     }
-
 }
