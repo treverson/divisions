@@ -1,5 +1,3 @@
-import { AssertionError } from "assert";
-
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 let TransactionListener = require('../../test-helpers/TransactionListener');
@@ -313,14 +311,15 @@ contract('Exchange', async accounts => {
         let decimals = (await divToken.decimals()).valueOf();
 
         let totalDivSupply = await divToken.totalSupply();
-        let expectedDivPrice = 10 ** decimals;
+        let expectedDivPrice = web3.toBigNumber(10 ** decimals);
 
         let actualDivPrice = await exchange.divPrice();
 
-        assert.equal(
-            actualDivPrice.valueOf(),
+        assert.deepEqual(
+            actualDivPrice,
             expectedDivPrice,
-            "When both DivisionsToken.totalSupply() and Treasury.getTotalPoolSize() are 0, price should be 10 ** DivisionsToken.decimals()"
+            "When both DivisionsToken.totalSupply() and Treasury.getTotalPoolSize() are 0, " +
+            "price should be 10 ** DivisionsToken.decimals()"
         );
 
         let mintedDiv = 5 * 10 ** decimals;
@@ -328,44 +327,82 @@ contract('Exchange', async accounts => {
 
         actualDivPrice = await exchange.divPrice();
 
-        assert.equal(
-            actualDivPrice.valueOf(),
+        assert.deepEqual(
+            actualDivPrice,
             expectedDivPrice,
-            "When DivisionsToken.totalSupply() == DivisionsToken.balanceOf(exchange) and Treasury.getTotalPoolSize() == 0, price should be 10 ** DivisionsToken.decimals()"
+            "When DivisionsToken.totalSupply() > 0 and Treasury.getTotalPoolSize() == 0," +
+            "price should be 10 ** DivisionsToken.decimals()"
         );
 
-        await treasury.setTotalPoolSize(20 * 10 ** 18);
-        
-        assert.equal(
-            actualDivPrice.valueOf(),
-            expectedDivPrice,
-            "When DivisionsToken.totalSupply() == DivisionsToken.balanceOf(exchange) and Treasury.getTotalPoolSize() > 0, price should be 10 ** DivisionsToken.decimals()"
-        );
-
-        await treasury.setTotalPoolSize(0);
         await divToken.burnFrom(exchange.address, mintedDiv);
-        await divToken.mint(accounts[4], mintedDiv);
+        let totalPoolSize = web3.toBigNumber(web3.toWei(4, 'ether'));
+        await treasury.setTotalPoolSize(totalPoolSize);
+
+        actualDivPrice = await exchange.divPrice();
+        assert.deepEqual(
+            actualDivPrice,
+            expectedDivPrice,
+            "When DivisionsToken.totalSupply() == 0 and Treasury.getTotalPoolSize() > 0," +
+            "price should be 10 ** DivisionsToken.decimals()"
+        );
+
+        await divToken.mint(exchange.address, mintedDiv);
+
+        expectedDivPrice = totalPoolSize
+            .mul(web3.toBigNumber(10)
+                .pow(await divToken.decimals())
+            )
+            .div(await divToken.totalSupply());
 
         actualDivPrice = await exchange.divPrice();
 
-        assert.equal(
-            actualDivPrice.valueOf(),
+        assert.deepEqual(
+            actualDivPrice,
             expectedDivPrice,
-            "When DivisionsToken.totalSupply > DivisionToken.balanceOf(exchange) and Treasury.getTotalPoolSize() is 0, price should be 10 ** DivisionsToken.decimals()"
+            "When DivisionsToken.totalSupply() > 0 and Treasury.getTotalPoolSize() > 0, price should be " +
+            "(Treasury.getTotalPoolSize * 10 ** DivisionsToken.decimals()) /" +
+            "DivisionsToken.totalSupply()"
         );
-
-        await treasury.setTotalPoolSize(20 * 10 ** 18);
-        
 
     });
 
-    // it('converts wei amounts to token', async () => {
-    //     assert.fail('TODO');
-    // });
+    it('converts wei amounts to DIV', async () => {
+        await divToken.mint(exchange.address, 3 * 10 ** 18);
+        await treasury.setTotalPoolSize(5 * 10 ** 18);
+        let divPrice = await exchange.divPrice();
+        let priceMultiplier = web3.toBigNumber(10).pow(await divToken.decimals());
 
-    // it('converts token amounts to wei', async () => {
-    //     assert.fail('TODO');
-    // });
+        let weiAmount = web3.toBigNumber(web3.toWei(20, 'ether'));
+
+        let expectedDivAmount = weiAmount.mul(priceMultiplier).divToInt(divPrice)
+
+        let actualDivAmount = await exchange.toDiv(weiAmount);
+
+        assert.deepEqual(
+            actualDivAmount,
+            expectedDivAmount,
+            "The converted amount is not correct"
+        );
+    });
+
+    it('converts DIV amounts to wei', async () => {
+        await divToken.mint(exchange.address, 3 * 10 ** 18);
+        await treasury.setTotalPoolSize(5 * 10 ** 18);
+        let divPrice = await exchange.divPrice();
+        let priceMultiplier = web3.toBigNumber(10).pow(await divToken.decimals());
+
+        let divAmount = web3.toBigNumber(20 * 10 ** 18);
+
+        let expectedWeiAmount = divAmount.mul(divPrice).divToInt(priceMultiplier);
+
+        let actualWeiAmount = await exchange.toWei(divAmount);
+
+        assert.deepEqual(
+            expectedWeiAmount,
+            actualWeiAmount,
+            "The converted amount is not correct"
+        );
+    });
 
     // it('sends wei reserve to the treasury', async () => {
     //     assert.fail('TODO');

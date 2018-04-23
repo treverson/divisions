@@ -17,10 +17,7 @@ contract MockDivisionsToken is ADivisionsToken {
         emit Mint(_to, _amount);
     }
     function burn(uint256 _amount) public {
-        balances[minter] = balances[minter].sub(_amount);
-        totalSupply_ = totalSupply_.sub(_amount);
-
-        emit Burn(_amount);
+        burnFrom(minter, _amount);
     }
 
     function transferMintership(address _minter) onlyOwner public {

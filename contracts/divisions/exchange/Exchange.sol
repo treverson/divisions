@@ -44,9 +44,9 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     function fillBuyOrder(uint256 _index) external;
     function fillSellOrder(uint256 _index) external;
 
-    function divPrice() public view returns (uint256); //Price of 10**18 DIV in Wei
-    function toDiv(uint256 _weiAmount) public view returns (uint256);
-    function toWei(uint256 _divAmount) public view returns (uint256);
+    function divPrice() public view returns (uint256 price); //Price of 10**18 DIV in Wei
+    function toDiv(uint256 _weiAmount) public view returns (uint256 divAmount);
+    function toWei(uint256 _divAmount) public view returns (uint256 weiAmount);
 
     function transferWeiToTreasury(uint256 amount) external;
     function handleDepositFromTreasury() external payable;
@@ -63,9 +63,12 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
 
 contract Exchange is AExchange {
 
+    uint64 constant priceMultiplier = 10 ** 18;
+
     function Exchange(ADivisionsToken _divToken, AStakeManager _stakeManager) public {
         divToken = _divToken;
         stakeManager = _stakeManager;
+        treasury = _stakeManager.treasury();
     }
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
@@ -150,16 +153,25 @@ contract Exchange is AExchange {
     function fillSellOrder(uint256 _index) external {
 
     }
-
-    function divPrice() public view returns (uint256) { //Price of 10**18 DIV in Wei
-        return 10 ** 18;
+    
+    //Price in priceMultiplier() * wei / DIV
+    function divPrice() public view returns (uint256 price) {
+        uint256 totalPoolSize;
+        uint256 totalSupply = divToken.totalSupply();
+        
+        // calculate treasury.getTotalPoolSize() only once when nessecary
+        if(totalSupply == 0 || (totalPoolSize = treasury.getTotalPoolSize()) == 0)
+            return price = 1 * priceMultiplier;
+        else
+            return price = totalPoolSize.mul(priceMultiplier).div(totalSupply);
     }
 
-    function toDiv(uint256 _weiAmount) public view returns (uint256) {
-
+    function toDiv(uint256 _weiAmount) public view returns (uint256 divAmount) {
+        return divAmount = _weiAmount.mul(priceMultiplier).div(divPrice());
     }
-    function toWei(uint256 _divAmount) public view returns (uint256) {
 
+    function toWei(uint256 _divAmount) public view returns (uint256 weiAmount) {
+        return weiAmount = _divAmount.mul(divPrice()).div(priceMultiplier);
     }
 
     function transferWeiToTreasury(uint256 amount) external {
@@ -169,14 +181,14 @@ contract Exchange is AExchange {
         
     }
 
-    function lastBuyOrderCumulativeAmount() private view returns (uint256) {
-        if(buyOrders.length == 0) return 0;
-        else return buyOrders[buyOrders.length - 1].cumulativeAmount;
+    function lastBuyOrderCumulativeAmount() private view returns (uint256 amount) {
+        if(buyOrders.length == 0) return amount = 0;
+        else return amount = buyOrders[buyOrders.length - 1].cumulativeAmount;
     }
 
-    function lastSellOrderCumulativeAmount() private view returns (uint256) {
-        if(sellOrders.length == 0) return 0;
-        else return sellOrders[sellOrders.length - 1].cumulativeAmount;
+    function lastSellOrderCumulativeAmount() private view returns (uint256 amount) {
+        if(sellOrders.length == 0) return amount = 0;
+        else return amount = sellOrders[sellOrders.length - 1].cumulativeAmount;
     }
 
 }
