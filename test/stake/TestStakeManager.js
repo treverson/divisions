@@ -189,6 +189,7 @@ contract('StakeManager', async accounts => {
                 targetHash,
                 targetEpoch,
                 sourceEpoch,
+                3000000,
                 { from: validator }
             ),
             casper.VoteCalled(),

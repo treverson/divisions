@@ -2,7 +2,7 @@ const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 let TransactionListener = require('../../test-helpers/TransactionListener');
 let transactionListener = new TransactionListener();
-const BigNumber =  require('bignumber.js');
+const BigNumber = require('bignumber.js');
 // ============ Test Exchange ============ //
 
 const Exchange = artifacts.require('Exchange');
@@ -209,47 +209,108 @@ contract('Exchange', async accounts => {
     //     );
     // });
 
-    it('calculates the amount that can be filled of a buy order ', async () => {
-        await treasury.setTotalPoolSize(web3.toWei(400, 'ether'));
 
-        await divToken.mint(exchange.address, 10 * 10 ** 18);
-        let divReserve = await exchange.divReserve();
-        let divReserveInWei = await exchange.toWei(divReserve);
-        let totalDivFilled = await exchange.totalDivFilled();
-        let totalDivFilledinWei = await exchange.toWei(totalDivFilled);
+    // let buyOrderAmounts = [
+    //     web3.toWei(3, 'ether'),
+    //     web3.toWei(10, 'ether')
+    // ];
+    // buyOrderAmounts.forEach(orderAmount => {
+    //     it('calculates the amount that can be filled of a buy order ', async () => {
+    //         await treasury.setTotalPoolSize(web3.toWei(5, 'ether'));
 
-        let out = await transactionListener.listen(
-            exchange.placeBuyOrder.sendTransaction({
-                value: web3.toWei(3, 'ether'),
-                from: accounts[5]
-            }),
-            exchange.BuyOrderPlaced()
-        );
+    //         await divToken.mint(exchange.address, 5 * 10 ** 18);
+    //         let divReserve = await exchange.divReserve();
+    //         let divReserveInWei = await exchange.toWei(divReserve);
+    //         let totalDivFilled = await exchange.totalDivFilled();
+    //         let totalDivFilledinWei = await exchange.toWei(totalDivFilled);
 
-        let buyOrder = new Order(await exchange.buyOrders(out.index));
+    //         let out = await transactionListener.listen(
+    //             exchange.placeBuyOrder.sendTransaction({
+    //                 value: orderAmount,
+    //                 from: accounts[5]
+    //             }),
+    //             exchange.BuyOrderPlaced()
+    //         );
 
+    //         let buyOrder = new Order(await exchange.buyOrders(out.index));
 
-        let minFillableAmount = divReserveInWei
-            .plus(totalDivFilledinWei)
-            .minus(buyOrder.cumulativeAmount);
+    //         let reserveLeft = divReserveInWei
+    //             .plus(totalDivFilledinWei)
+    //             .minus(buyOrder.cumulativeAmount.minus(buyOrder.amount));
 
-        let actualFillableAmount = await exchange.buyOrderFillableAmount(out.index);
+    //         let amountLeft = buyOrder.amount
+    //             .minus(buyOrder.amountFilled)
+    //             .minus(buyOrder.amountCanceled);
 
-        let expectedFillableAmount = BigNumber.min(minFillableAmount, buyOrder.amount);
+    //         let actualFillableAmount = await exchange.buyOrderFillableAmount(out.index);
 
-        assert.deepEqual(
-            actualFillableAmount,
-            expectedFillableAmount,
-            "The fillable amount was not correct"
-        );
+    //         let expectedFillableAmount = BigNumber.min(
+    //             reserveLeft,
+    //             amountLeft
+    //         );
 
-        transactionListener.dispose();
-    });
+    //         assert.equal(
+    //             actualFillableAmount.valueOf(),
+    //             expectedFillableAmount.valueOf(),
+    //             "The fillable amount was not correct"
+    //         );
 
-    // it('calculates the amount that can be filled of a sell order', async () => {
-    //     assert.fail('TODO');
+    //         transactionListener.dispose();
+    //     });
     // });
 
+    let sellOrderAmounts = [
+        3 * 10 ** 18,
+        10 * 10 ** 18
+    ];
+    sellOrderAmounts.forEach(orderAmount => {
+        it('calculates the amount that can be filled of a sell order', async () => {
+            await treasury.setTotalPoolSize(web3.toWei(5, 'ether'));
+
+            await divToken.mint(exchange.address, 5 * 10 ** 18);
+            let weiReserve = await exchange.weiReserve();
+            let weiReserveInDiv = await exchange.toDiv(weiReserve);
+            let totalWeiFilled = await exchange.totalWeiFilled();
+            let totalWeiFilledinDiv = await exchange.toDiv(totalWeiFilled);
+
+            await divToken.mint(accounts[1], orderAmount);
+
+            let out = await transactionListener.listen(
+                divToken.approveAndCall.sendTransaction(
+                    exchange.address,
+                    orderAmount,
+                    "",
+                    { from: accounts[1] }
+                ),
+                exchange.SellOrderPlaced()
+            );
+
+            let sellOrder = new Order(await exchange.sellOrders(out.index));
+
+            let reserveLeft = weiReserveInDiv
+                .plus(totalWeiFilledinDiv)
+                .minus(sellOrder.cumulativeAmount.minus(sellOrder.amount));
+
+            let amountLeft = sellOrder.amount
+                .minus(sellOrder.amountFilled)
+                .minus(sellOrder.amountCanceled);
+
+            let actualFillableAmount = await exchange.sellOrderFillableAmount(out.index);
+
+            let expectedFillableAmount = BigNumber.min(
+                reserveLeft,
+                amountLeft
+            );
+
+            assert.equal(
+                actualFillableAmount.valueOf(),
+                expectedFillableAmount.valueOf(),
+                "The fillable amount was not correct"
+            );
+
+            transactionListener.dispose();
+        });
+    });
     // it('fills buy orders', async () => {
     //     let seller = accounts[2];
     //     let sellAmount = 100 * 10 ** 18;
@@ -257,10 +318,14 @@ contract('Exchange', async accounts => {
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
     //     await exchange.placeSellOrder(sellAmount, { from: seller });
 
-    //     let buyer = accounts[1]
+    //     let buyer = accounts[1];
     //     let buyAmount = web3.toWei(4, 'ether');
+
+    //     let totalWeiFilledBefore = await exchange.totalWeiFilled();
+    //     let totalDivFilledBefore = await exchange.totalDivFilled();
+    //     let buyOrderIndex
     //     try {
-    //         let buyOrderIndex = (await transactionListener.listen(
+    //         buyOrderIndex = (await transactionListener.listen(
     //             exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
     //             exchange.BuyOrderPlaced()
     //         )).index;
@@ -272,10 +337,26 @@ contract('Exchange', async accounts => {
 
     //     let buyOrder = new Order(await exchange.getBuyOrder(buyOrderIndex));
 
-    //     assert.equal(
-    //         buyOrder.amountFilled.valueOf(),
-    //         buyAmount.valueOf(),
+    //     let totalWeiFilledAfter = await exchange.totalWeiFilled();
+    //     let totalDivFilledAfter = await exchange.totalDivFilled();
+    //     let buyAmountInDiv = await exchange.toDiv(buyAmount);
+
+    //     assert.deepEqual(
+    //         buyOrder.amountFilled,
+    //         buyAmount,
     //         "The order was not fully filled"
+    //     );
+
+    //     assert.deepEqual(
+    //         totalWeiFilledAfter,
+    //         totalWeiFilledBefore.plus(buyAmount),
+    //         "The total amount of wei that was filled was not updated correctly"
+    //     );
+
+    //     assert.deepEqual(
+    //         totalDivFilledAfter,
+    //         totalDivFilledBefore.plus(buyAmountInDiv),
+    //         "The total amount of wei that was filled was not updated correctly"
     //     );
     // });
 
@@ -314,8 +395,12 @@ contract('Exchange', async accounts => {
     //     await divToken.mint(seller, sellAmount);
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
 
+    //     let totalDivFilledBefore = await exchange.totalDivFilled();
+    //     let totalWeiFilledBefore = await exchange.totalWeiFilled();
+
+    //     let sellOrderIndex
     //     try {
-    //         let sellOrderIndex = (await transactionListener.listen(
+    //         sellOrderIndex = (await transactionListener.listen(
     //             exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
     //             exchange.SellOrderPlaced()
     //         )).index;
@@ -324,13 +409,29 @@ contract('Exchange', async accounts => {
     //     }
 
     //     await exchange.fillSellOrder(sellOrderIndex);
-    //     let sellOrderArray = await exchange.getSellOrder(sellOrderIndex);
+
     //     let sellOrder = new Order(await exchange.getSellOrder(sellOrderIndex));
 
-    //     assert.equal(
-    //         sellOrder.amountFilled.valueOf(),
-    //         sellAmount.valueOf(),
+    //     let totalDivFilledAfter = await exchange.totalDivFilled();
+    //     let totalWeiFilledAfter = await exchange.totalWeiFilled();
+    //     let sellAmountInWei = await exchange.toWei(sellAmount);
+
+    //     assert.deepEqual(
+    //         sellOrder.amountFilled,
+    //         sellAmount,
     //         "The order was not fully filled"
+    //     );
+
+    //     assert.deepEqual(
+    //         totalDivFilledAfter,
+    //         totalDivFilledBefore.plus(sellAmount),
+    //         "The total amount of DIV that was filled was not updated correctly"
+    //     );
+
+    //     assert.deepEqual(
+    //         totalWeiFilledAfter,
+    //         totalWeiFilledBefore.plus(sellAmountInWei),
+    //         "The total amount of wei that was filled was not updated correctly"
     //     );
     // });
 
@@ -360,7 +461,23 @@ contract('Exchange', async accounts => {
     //     );
     // });
 
-    // it('calculates the price of tokens', async () => {
+    // it('instantly fills buy orders if DIV is available in reserve', async () => {
+    //     assert.fail('TODO');
+    // });
+
+    // it('instantly fills sell orders if Ether is available in reserve', async () =>{
+    //     assert.fail('TODO');
+    // });
+
+    // it('cancels buy orders', async () => {
+    //  assert.fail('TODO');
+    // });
+
+    // it('cancels sell orders', async () => {
+    //     assert.fail('TODO');
+    // });
+
+    // it('calculates the price of DIV tokens', async () => {
     //     await treasury.setTotalPoolSize(0);
 
     //     let decimals = (await divToken.decimals()).valueOf();
@@ -466,10 +583,6 @@ contract('Exchange', async accounts => {
     // it('handles wei that is deposited by the treasury', async () => {
     //     assert.fail('TODO');
     // });
-
-    // it('Places sell orders on receiveApproval', async () => {
-
-    // });
 });
 
 class Order {
@@ -479,5 +592,6 @@ class Order {
         this.amount = orderArray[1];
         this.cumulativeAmount = orderArray[2];
         this.amountFilled = orderArray[3];
+        this.amountCanceled = orderArray[4];
     }
 }

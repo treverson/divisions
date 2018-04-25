@@ -19,6 +19,7 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
         uint256 amount; 
         uint256 cumulativeAmount;
         uint256 amountFilled;
+        uint256 amountCancelled;
     }
 
     
@@ -42,8 +43,8 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     function placeBuyOrder() payable external;
     function placeSellOrder(uint256 _amount) external;
 
-    function buyOrderFillableAmount(uint256 _index) public view returns (uint256 amount);
-    function sellOrderFillableAmount(uint256 _index) public view returns (uint256 amount);
+    function buyOrderFillableAmount(uint256 _index) external view returns (uint256 amount);
+    function sellOrderFillableAmount(uint256 _index) external view returns (uint256 amount);
 
     function getBuyOrderIndexes(address _buyer) public view returns (uint256[] indexes);
     function getSellOrderIndexes(address _seller) public view returns (uint256[] indexes);
@@ -51,9 +52,12 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     function fillBuyOrder(uint256 _index) external;
     function fillSellOrder(uint256 _index) external;
 
+    function cancelBuyOrder(uint256 _index) external;
+    function cancelSellOrder(uint256 _index) external;
+
     function divPrice() public view returns (uint256 price); //Price of 10**18 DIV in Wei
-    function toDiv(uint256 _weiAmount) public view returns (uint256 divAmount);
-    function toWei(uint256 _divAmount) public view returns (uint256 weiAmount);
+    function toDiv(uint256 _weiAmount) external view returns (uint256 divAmount);
+    function toWei(uint256 _divAmount) external view returns (uint256 weiAmount);
 
     function transferWeiToTreasury(uint256 _amount) external;
     function handleDepositFromTreasury() external payable;
@@ -106,7 +110,8 @@ contract Exchange is AExchange {
             sender: msg.sender,
             amount: msg.value,
             cumulativeAmount: lastBuyOrderCumulativeAmount().add(msg.value),
-            amountFilled: 0
+            amountFilled: 0,
+            amountCancelled: 0
         }));
 
         buyOrderIndexes[msg.sender].push(buyOrders.length - 1);
@@ -126,21 +131,35 @@ contract Exchange is AExchange {
             sender: _sender,
             amount: _amount,
             cumulativeAmount: lastBuyOrderCumulativeAmount().add(_amount),
-            amountFilled: 0
+            amountFilled: 0,
+            amountCancelled: 0
         }));
 
         sellOrderIndexes[_sender].push(sellOrders.length - 1);
 
-        emit SellOrderPlaced(buyOrders.length - 1, _sender, _amount);
+        emit SellOrderPlaced(sellOrders.length - 1, _sender, _amount);
     }
 
-    function buyOrderFillableAmount(uint256 _index) public view returns (uint256 amount) {
+    function buyOrderFillableAmount(uint256 _index) external view returns (uint256 amount) {
+        return amount = buyOrderFillableAmount(_index, divPrice());
+    }
+
+    function buyOrderFillableAmount(uint256 _index, uint256 _divPrice) internal view returns (uint256 amount) {
         Order storage buyOrder = buyOrders[_index];
-        return amount = Math.min256(toWei(divReserve() + totalDivFilled) - buyOrder.cumulativeAmount, buyOrder.amount);
+        uint256 amountLeft = buyOrder.amount - buyOrder.amountFilled - buyOrder.amountCancelled;
+        uint256 reserveLeft = toWei(divReserve() + totalDivFilled, _divPrice) - (buyOrder.cumulativeAmount - buyOrder.amount);
+        return amount = Math.min256(reserveLeft, amountLeft);
     }
 
-    function sellOrderFillableAmount(uint256 _index) public view returns (uint256 amount) {
-        return 0;
+    function sellOrderFillableAmount(uint256 _index) external view returns (uint256 amount) {
+        return amount = sellOrderFillableAmount(_index, divPrice());
+    }
+
+    function sellOrderFillableAmount(uint256 _index, uint256 _divPrice) internal view returns (uint256 amount) {
+        Order storage sellOrder = sellOrders[_index];
+        uint256 amountLeft = sellOrder.amount - sellOrder.amountFilled - sellOrder.amountCancelled;
+        uint256 reserveLeft = toWei(weiReserve() + totalWeiFilled, _divPrice) - (sellOrder.cumulativeAmount - sellOrder.amount);
+        return amount = Math.min256(reserveLeft, amountLeft);
     }
 
     function getBuyOrderIndexes(address _buyer) public view returns (uint256[] indexes) {
@@ -162,10 +181,18 @@ contract Exchange is AExchange {
     }
 
     function fillBuyOrder(uint256 _index) external {
-
+        
     }
 
     function fillSellOrder(uint256 _index) external {
+
+    }
+
+    function cancelBuyOrder(uint256 _index) external {
+
+    }
+
+    function cancelSellOrder(uint256 _index) external {
 
     }
     
@@ -181,12 +208,20 @@ contract Exchange is AExchange {
             return price = totalPoolSize.mul(priceMultiplier).div(totalSupply);
     }
 
-    function toDiv(uint256 _weiAmount) public view returns (uint256 divAmount) {
-        return divAmount = _weiAmount.mul(priceMultiplier).div(divPrice());
+    function toDiv(uint256 _weiAmount) external view returns (uint256 divAmount) {
+        return divAmount = toDiv(_weiAmount, divPrice());
     }
 
-    function toWei(uint256 _divAmount) public view returns (uint256 weiAmount) {
-        return weiAmount = _divAmount.mul(divPrice()).div(priceMultiplier);
+    function toDiv(uint256 _weiAmount, uint256 _divPrice) internal pure returns (uint256 divAmount) {
+        return divAmount = _weiAmount.mul(priceMultiplier).div(_divPrice);
+    }
+
+    function toWei(uint256 _divAmount) external view returns (uint256 weiAmount) {
+        return weiAmount = toWei(_divAmount, divPrice());
+    }
+
+    function toWei(uint256 _divAmount, uint256 _divPrice) internal pure returns (uint256 weiAmount) {
+        return weiAmount = _divAmount.mul(_divPrice).div(priceMultiplier);
     }
 
     function transferWeiToTreasury(uint256 _amount) external {
