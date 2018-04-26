@@ -79,4 +79,8 @@ contract MockStakeManager is AStakeManager {
     {
     }
 
+    function simulateFillTreasury(uint256 _amount) external {
+        exchange.transferWeiToTreasury(_amount);
+    }
+
 }
