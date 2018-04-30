@@ -1,4 +1,4 @@
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
 
 import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
@@ -85,7 +85,7 @@ contract AStakeManager is Ownable {
 contract StakeManager is AStakeManager {
     using SafeMath for uint256;
 
-    function StakeManager(
+    constructor(
         ACasper _casper,
         address _validator,
         ATreasury _treasury

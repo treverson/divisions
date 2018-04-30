@@ -29,7 +29,7 @@ contract('WithdrawalBox', async accounts => {
 
         let balanceAfter = await web3.eth.getBalance(recipient);
 
-        assert(balanceBefore.add(amount).minus(balanceAfter).lessThan(10 ** 16), "The ether was not sent to the recipient");
+        assert(balanceBefore.add(amount).minus(balanceAfter).lessThan(1e16), "The ether was not sent to the recipient");
 
         await expectThrow(
             withdrawalBox.sweep(),

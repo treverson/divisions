@@ -1,10 +1,10 @@
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
 
 import "../../divisions/token/DivisionsToken.sol";
 
 contract MockDivisionsToken is ADivisionsToken {
 
-    function MockDivisionsToken() public {
+    constructor() public {
         symbol = "MOCK";
         name = "MockDivisions";
         decimals = 18;

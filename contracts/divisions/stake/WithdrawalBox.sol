@@ -1,4 +1,4 @@
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
 
 import "./StakeManager.sol";
 import "./Treasury.sol";
@@ -18,7 +18,7 @@ contract AWithdrawalBox {
 
 contract WithdrawalBox is AWithdrawalBox {
 
-    function WithdrawalBox(ATreasury _treasury) public {
+    constructor(ATreasury _treasury) public {
         require(_treasury != msg.sender);
 
         deployedAt = block.number;

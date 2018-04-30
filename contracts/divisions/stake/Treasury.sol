@@ -1,4 +1,4 @@
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
 
 import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
@@ -35,7 +35,7 @@ contract ATreasury is Ownable {
 contract Treasury is ATreasury {
     using SafeMath for uint256;
 
-    function Treasury(ACasper _casper) public {
+    constructor(ACasper _casper) public {
         casper = _casper;
     }
 

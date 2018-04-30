@@ -1,4 +1,4 @@
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
 
 import "../../divisions/stake/ACasper.sol";
 /*  Mock Capser contract. Does not do decode RLP, 
@@ -17,7 +17,7 @@ contract MockCasper is ACasper {
     bool rejectVote = false;
     bool rejectLogout = false;
 
-    function MockCasper(
+    constructor(
         int128 _min_deposit_size,
         int128 _epoch_length,
         int128 _dynasty_logout_delay,

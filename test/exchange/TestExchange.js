@@ -39,6 +39,7 @@ contract('Exchange', async accounts => {
         divToken = await MockDivisionsToken.new();
         exchange = await Exchange.new(divToken.address, stakeManager.address);
         await stakeManager.setExchange(exchange.address);
+        await divToken.transferMintership(exchange.address);
     })
 
     // it('calculates the div reserve', async () => {
@@ -69,7 +70,7 @@ contract('Exchange', async accounts => {
 
     // it('places buy orders', async () => {
     //     let buyer = accounts[1];
-    //     let buyAmount = web3.toWei(2, 'ether');
+    //     let buyAmount = web3.toBigNumber(web3.toWei(2, 'ether'));
 
     //     let buyOrdersLengthBefore = await exchange.buyOrdersLength();
     //     let buyOrderIndexesBefore = await exchange.getBuyOrderIndexes(buyer);
@@ -102,8 +103,8 @@ contract('Exchange', async accounts => {
     //     assert.equal(buyOrder.sender, buyer, "The sender of the order was not stored correctly");
     //     assert.equal(buyOrder.amount.valueOf(), buyAmount.valueOf(), "The amount was no stored correctly");
     //     assert.equal(buyOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
-
-    //      assert.fail('TODO: check cumulative amount');
+    //     assert.equal(buyOrder.cumulativeAmount.valueOf(), buyAmount.valueOf(), "The cumulative amount is not correct");
+    //     assert.equal(buyOrder.finished, false, "The order was initialized with finished set to true");
 
     //     await expectThrow(
     //         exchange.placeBuyOrder({ from: buyer, value: 0 }),
@@ -126,7 +127,7 @@ contract('Exchange', async accounts => {
 
     // it('places sell orders', async () => {
     //     let seller = accounts[1];
-    //     let sellAmount = web3.toBigNumber(2 * 10 ** 18);
+    //     let sellAmount = web3.toBigNumber(2e18);
 
     //     await divToken.mint(seller, sellAmount);
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
@@ -162,8 +163,8 @@ contract('Exchange', async accounts => {
     //     assert.equal(sellOrder.sender, seller, "The sender of the order was not stored correctly");
     //     assert.equal(sellOrder.amount.valueOf(), sellAmount.valueOf(), "The amount was no stored correctly");
     //     assert.equal(sellOrder.amountFilled.valueOf(), 0, "The filled amount is not equal to zero");
-
-    //      assert.fail('TODO: check cumulative amount');
+    //     assert.equal(sellOrder.cumulativeAmount.valueOf(), sellAmount.valueOf(), "The cumulative amount is not correct");
+    //     assert.equal(sellOrder.finished, false, "The order was initialized with finished set to true");
 
     //     await divToken.mint(seller, 100);
     //     await divToken.approve(exchange.address, 100);
@@ -173,9 +174,13 @@ contract('Exchange', async accounts => {
     //     );
     // });
 
+    // it('implements a mininum amount for orders', async () => {
+    //     assert.fail('TODO owner can set mininum amount for waitlisted orders to prevent flooding');
+    // })
+
     // it('places sell orders on receiveApproval from divToken', async () => {
     //     let seller = accounts[5];
-    //     let sellAmount = web3.toBigNumber(6 * 10 ** 18);
+    //     let sellAmount = web3.toBigNumber(6e18);
     //     await divToken.mint(seller, sellAmount);
 
     //     await divToken.approveAndCall(exchange.address, sellAmount, "", {from: seller});
@@ -195,7 +200,8 @@ contract('Exchange', async accounts => {
     //             amount: sellAmount,
     //             amountFilled: web3.toBigNumber(0),
     //             amountCanceled: web3.toBigNumber(0),
-    //             index: sellOrderIndex
+    //             index: sellOrderIndex,
+    //             finished: false
     //         },
     //         "The stored sell order was not correct"
     //     );
@@ -203,7 +209,7 @@ contract('Exchange', async accounts => {
 
     // it('logs an event on placeSellOrder', async () => {
     //     let seller = accounts[1];
-    //     let sellAmount = web3.toBigNumber(2 * 10 ** 18);
+    //     let sellAmount = web3.toBigNumber(2e18);
 
     //     await divToken.mint(seller, sellAmount);
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
@@ -226,7 +232,7 @@ contract('Exchange', async accounts => {
     //     it('calculates the amount that can be filled of a buy order ', async () => {
     //         await treasury.setTotalPoolSize(web3.toWei(5, 'ether'));
 
-    //         await divToken.mint(exchange.address, 5 * 10 ** 18);
+    //         await divToken.mint(exchange.address, 5e18);
     //         let divReserve = await exchange.divReserve();
     //         let divReserveInWei = await exchange.toWei(divReserve);
     //         let totalDivFilled = await exchange.totalDivFilled();
@@ -268,14 +274,14 @@ contract('Exchange', async accounts => {
     // });
 
     // let sellOrderAmounts = [
-    //     3 * 10 ** 18,
-    //     10 * 10 ** 18
+    //     3e18,
+    //     10e18
     // ];
     // sellOrderAmounts.forEach(orderAmount => {
     //     it('calculates the amount that can be filled of a sell order', async () => {
     //         await treasury.setTotalPoolSize(web3.toWei(5, 'ether'));
 
-    //         await divToken.mint(exchange.address, 5 * 10 ** 18);
+    //         await divToken.mint(exchange.address, 5e18);
     //         let weiReserve = await exchange.weiReserve();
     //         let weiReserveInDiv = await exchange.toDiv(weiReserve);
     //         let totalWeiFilled = await exchange.totalWeiFilled();
@@ -322,7 +328,7 @@ contract('Exchange', async accounts => {
 
     // it('fills buy orders', async () => {
     //     let seller = accounts[2];
-    //     let sellAmount = 100 * 10 ** 18;
+    //     let sellAmount = 100e18;
     //     await divToken.mint(seller, sellAmount);
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
     //     await exchange.placeSellOrder(sellAmount, { from: seller });
@@ -377,7 +383,7 @@ contract('Exchange', async accounts => {
 
     // it('logs an event on fillBuyOrder', async () => {
     //     let seller = accounts[2];
-    //     let sellAmount = web3.toBigNumber(100 * 10 ** 18);
+    //     let sellAmount = web3.toBigNumber(100e18);
     //     await divToken.mint(seller, sellAmount);
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
     //     await exchange.placeSellOrder(sellAmount, { from: seller });
@@ -407,7 +413,7 @@ contract('Exchange', async accounts => {
     //     await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
 
     //     let seller = accounts[1];
-    //     let sellAmount = web3.toBigNumber(1 * 10 ** 18);
+    //     let sellAmount = web3.toBigNumber(1e18);
     //     await divToken.mint(seller, sellAmount);
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
 
@@ -464,7 +470,7 @@ contract('Exchange', async accounts => {
     //     await exchange.placeBuyOrder({ value: buyAmount, from: buyer });
 
     //     let seller = accounts[2];
-    //     let sellAmount = web3.toBigNumber(1 * 10 ** 18);
+    //     let sellAmount = web3.toBigNumber(1e18);
     //     await divToken.mint(seller, sellAmount);
     //     await divToken.approve(exchange.address, sellAmount, { from: seller });
 
@@ -556,15 +562,15 @@ contract('Exchange', async accounts => {
     //         actualDivPrice,
     //         expectedDivPrice,
     //         "When DivisionsToken.totalSupply() > 0 and Treasury.getTotalPoolSize() > 0, price should be " +
-    //         "(Treasury.getTotalPoolSize * 10 ** DivisionsToken.decimals()) /" +
+    //         "(Treasury.getTotalPoolSizeeDivisionsToken.decimals()) /" +
     //         "DivisionsToken.totalSupply()"
     //     );
 
     // });
 
     // it('converts wei amounts to DIV', async () => {
-    //     await divToken.mint(exchange.address, 3 * 10 ** 18);
-    //     await treasury.setTotalPoolSize(5 * 10 ** 18);
+    //     await divToken.mint(exchange.address, 3e18);
+    //     await treasury.setTotalPoolSize(5e18);
     //     let divPrice = await exchange.divPrice();
     //     let priceMultiplier = web3.toBigNumber(10).pow(await divToken.decimals());
 
@@ -582,12 +588,12 @@ contract('Exchange', async accounts => {
     // });
 
     // it('converts DIV amounts to wei', async () => {
-    //     await divToken.mint(exchange.address, 3 * 10 ** 18);
-    //     await treasury.setTotalPoolSize(5 * 10 ** 18);
+    //     await divToken.mint(exchange.address, 3e18);
+    //     await treasury.setTotalPoolSize(5e18);
     //     let divPrice = await exchange.divPrice();
     //     let priceMultiplier = web3.toBigNumber(10).pow(await divToken.decimals());
 
-    //     let divAmount = web3.toBigNumber(20 * 10 ** 18);
+    //     let divAmount = web3.toBigNumber(20e18);
 
     //     let expectedWeiAmount = divAmount.mul(divPrice).divToInt(priceMultiplier);
 
@@ -618,34 +624,25 @@ contract('Exchange', async accounts => {
         } finally {
             transactionListener.dispose();
         }
-        let weiReserveBefore = await exchange.weiReserve();
-        
+
         await expectThrow(
             exchange.transferWeiToTreasury(totalBuyAmount),
             "Only the stake manager can have the exchange transfer wei to the treasury"
         );
 
         let totalDivSupplyBefore = await divToken.totalSupply();
+        let weiReserveBefore = await exchange.weiReserve();
 
         await expectEvent(
             stakeManager.simulateFillTreasury.sendTransaction(totalBuyAmount),
             treasury.DepositCalled(),
             { from: exchange.address, value: totalBuyAmount }
-        );
-        
+        );        
 
-        let totalSupplyAfter = await divToken.totalSupply();
-
-        let weiReserveAfter = await exchange.weiReserve();
+        let totalDivSupplyAfter = await divToken.totalSupply();
 
         assert.deepEqual(
-            weiReserveAfter,
-            weiReserveBefore.sub(totalBuyAmount),
-            "The weiReserve was not updated correctly"
-        );
-
-        assert.deepEqual(
-            totalSupplyAfter,
+            totalDivSupplyAfter,
             totalDivSupplyBefore.plus(await exchange.toDiv(totalBuyAmount)),
             "The total supply was not updated correctly"
         );
@@ -660,9 +657,51 @@ contract('Exchange', async accounts => {
         };
     });
 
-    // it('handles wei that is deposited by the treasury, filling sell orders and burning DIV', async () => {
-    //     assert.fail('TODO');
-    // });
+    it('handles ether deposits by the treasury, filling sell orders and burning DIV', async () => {
+        let orderIndexes = [];
+        let sellAmount = web3.toBigNumber(0.5e18);
+        let sellAmountInWei = await exchange.toWei(sellAmount);
+        let totalSellAmount = web3.toBigNumber(0);
+        try {
+            for (let i = 0; i < 10; i++) {
+                totalSellAmount = totalSellAmount.add(sellAmount);
+                let seller = accounts[i % 5 + 5];
+                await divToken.mint(seller, sellAmount);
+                orderIndexes.push(
+                    (await transactionListener.listen(
+                        divToken.approveAndCall
+                            .sendTransaction(exchange.address, sellAmount, "", { from: seller }),
+                        exchange.SellOrderPlaced()
+                    )).index
+                );
+                await web3.eth.sendTransaction({ from: seller, to: accounts[0], value: sellAmountInWei });
+            }
+        } finally {
+            transactionListener.dispose();
+        }
+
+        let totalDivSupplyBefore = await divToken.totalSupply();
+        let totalSellAmountInWei = await exchange.toWei(totalSellAmount);
+
+        await exchange.handleEtherDeposit({ value: totalSellAmountInWei });
+
+        let totalDivSupplyAfter = await divToken.totalSupply();
+
+        assert.deepEqual(
+            totalDivSupplyAfter,
+            totalDivSupplyBefore.sub(totalSellAmountInWei),
+            "The total supply was not updated correctly"
+        );
+
+        for (let orderIndex in orderIndexes) {
+            let order = new Order(await exchange.sellOrders(orderIndex));
+            assert.deepEqual(
+                order.amountFilled,
+                sellAmount,
+                "The order at index " + order.index.valueOf() + " was not filled"
+            );
+        }
+    });
 });
 
 class Order {

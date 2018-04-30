@@ -21,7 +21,7 @@ contract('DivisionsToken', async accounts => {
     });
 
     it('mints', async () => {
-        let mintedAmount = 10 * 10 ** 18;
+        let mintedAmount = 10e18;
         let recipient = accounts[2];
         let balanceBefore = await divisionsToken.balanceOf(recipient);
         let supplyBefore = await divisionsToken.totalSupply();
@@ -60,7 +60,7 @@ contract('DivisionsToken', async accounts => {
     });
 
     it('logs an event on mint', async () => {
-        let mintedAmount = web3.toBigNumber(10 * 10 ** 18);
+        let mintedAmount = web3.toBigNumber(10e18);
         let recipient = accounts[2];
 
         await expectEvent(
@@ -71,7 +71,7 @@ contract('DivisionsToken', async accounts => {
     });
 
     it('burns', async () => {
-        let burnedAmount = 10 * 10 ** 18;
+        let burnedAmount = 10e18;
 
         await divisionsToken.mint(minter, burnedAmount, { from: minter });
 
@@ -115,7 +115,7 @@ contract('DivisionsToken', async accounts => {
     });
 
     it('logs an event on burn', async () => {
-        let burnedAmount = web3.toBigNumber(10 * 10 ** 18);
+        let burnedAmount = web3.toBigNumber(10e18);
         await divisionsToken.mint(minter, burnedAmount, { from: minter });
 
         await expectEvent(
