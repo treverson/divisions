@@ -23,6 +23,11 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
         uint256 index; //The index of the orer
         bool finished; //Whether the order was filled completely or canceled
     }
+
+    // The minimum amount of a buy order in wei
+    uint256 public minBuyOrderAmount;
+    // The minumum amount of a sell order in DIV
+    uint256 public minSellOrderAmount;
     
     Order[] public buyOrders;
     //All buy orders with index < buyOrderCursor are finished
@@ -38,6 +43,9 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     uint256 public totalDivFilled;
     //The total amount of wei that was filled in orders
     uint256 public totalWeiFilled;
+
+    function setMinBuyOrderAmount(uint256 _min) external;
+    function setMinSellOrderAmount(uint256 _max) external;
 
     //The length of the array of buy orders
     function buyOrdersLength() public view returns (uint256 length);
@@ -116,6 +124,15 @@ contract Exchange is AExchange {
         sellOrderCursor = 0;
     }
 
+    
+    function setMinBuyOrderAmount(uint256 _min) external onlyOwner {
+        minBuyOrderAmount = _min;
+    }
+
+    function setMinSellOrderAmount(uint256 _min) external onlyOwner {
+        minSellOrderAmount = _min;
+    }
+
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
         require(_token == address(divToken));
         require(_token == msg.sender);
@@ -143,7 +160,7 @@ contract Exchange is AExchange {
     }
 
     function placeBuyOrder(uint256 _amount, address _sender) internal returns (Order storage buyOrder) {
-        require(_amount > 0);
+        require(_amount >= minBuyOrderAmount);
 
         uint256 index = buyOrders.length;
 
@@ -212,11 +229,11 @@ contract Exchange is AExchange {
     }
 
     function buyOrderReserveLeft(Order storage _buyOrder, uint256 _divPrice) internal view returns(uint256 reserveLeft) {
-        return reserveLeft = toWei(divReserve() + totalDivFilled, _divPrice) - _buyOrder.cumulativeAmount;
+        return reserveLeft = toWei(divReserve(), _divPrice) + totalWeiFilled + _buyOrder.amount - _buyOrder.cumulativeAmount;
     }
 
     function sellOrderReserveLeft(Order storage _sellOrder, uint256 _divPrice) internal view returns(uint256 reserveLeft) {
-        return reserveLeft = toWei(weiReserve() + totalWeiFilled, _divPrice) - _sellOrder.cumulativeAmount;
+        return reserveLeft = toDiv(weiReserve(), _divPrice) + totalDivFilled + _sellOrder.amount - _sellOrder.cumulativeAmount;
     }
 
     function orderAmountLeft(Order storage _order) internal view returns(uint256 amountLeft){
@@ -266,7 +283,11 @@ contract Exchange is AExchange {
             if(buyOrder.sender == address(0))
                 break;
             
-            amountLeftToFill -= fillBuyOrderUpUntil(buyOrder, amountLeftToFill, _divPrice);
+            uint256 amountFilled = fillBuyOrderUpUntil(buyOrder, amountLeftToFill, _divPrice);
+            
+            assert(amountFilled > 0);
+
+            amountLeftToFill -= amountFilled;
             tempCursor = buyOrder.index;
         }
         buyOrderCursor = tempCursor;
@@ -285,7 +306,11 @@ contract Exchange is AExchange {
             if(sellOrder.sender == address(0))
                 break;
             
-            amountLeftToFill -= fillSellOrderUpUntil(sellOrder, amountLeftToFill, _divPrice);
+            uint256 amountFilled = fillSellOrderUpUntil(sellOrder, amountLeftToFill, _divPrice);
+
+            assert(amountFilled > 0);
+
+            amountLeftToFill -= amountFilled;
             tempCursor = sellOrder.index;
         }
         sellOrderCursor = tempCursor;
@@ -334,7 +359,7 @@ contract Exchange is AExchange {
 
         //The amount we can fill to this order at this time
         uint256 fillableAmount = Math.min256(reserveLeft, amountLeft);
-
+      
         if(fillableAmount > 0){
             filledAmount = Math.min256(_max, fillableAmount);
             
@@ -388,7 +413,7 @@ contract Exchange is AExchange {
 
     }
     
-    //Price in priceMultiplier() * wei / DIV
+    //Price in [priceMultiplier] * wei / DIV
     function divPrice() public view returns (uint256 price) {
         uint256 totalPoolSize;
         uint256 totalSupply = divToken.totalSupply();
@@ -469,5 +494,4 @@ contract Exchange is AExchange {
         require(msg.sender == address(stakeManager));
         _;
     }
-
 }
