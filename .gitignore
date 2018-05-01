@@ -67,3 +67,6 @@ bin/
 
 # migrations output
 **/addresses*.json
+
+#node requests
+.node-xmlhttprequest*
