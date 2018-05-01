@@ -29,6 +29,9 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     // The minumum amount of a sell order in DIV
     uint256 public minSellOrderAmount;
     
+    function setMinBuyOrderAmount(uint256 _min) external;
+    function setMinSellOrderAmount(uint256 _max) external;
+
     Order[] public buyOrders;
     //All buy orders with index < buyOrderCursor are finished
     uint256 public buyOrderCursor;
@@ -39,13 +42,10 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     uint256 public sellOrderCursor;
     mapping(address => uint256[]) sellOrderIndexes;
 
-    //The total amount of DIV that was filled in orders
-    uint256 public totalDivFilled;
-    //The total amount of wei that was filled in orders
-    uint256 public totalWeiFilled;
-
-    function setMinBuyOrderAmount(uint256 _min) external;
-    function setMinSellOrderAmount(uint256 _max) external;
+    //The total amount that was filled in sell orders
+    uint256 public totalSellAmountFilled;
+    //The total amount that was filled in buy orders
+    uint256 public totalBuyAmountFilled;
 
     //The length of the array of buy orders
     function buyOrdersLength() public view returns (uint256 length);
@@ -118,12 +118,13 @@ contract Exchange is AExchange {
         divToken = _divToken;
         stakeManager = _stakeManager;
         treasury = _stakeManager.treasury();
-        totalDivFilled = 0;
-        totalWeiFilled = 0;
+
+        totalSellAmountFilled = 0;
+        totalBuyAmountFilled = 0;
+
         buyOrderCursor = 0;
         sellOrderCursor = 0;
     }
-
     
     function setMinBuyOrderAmount(uint256 _min) external onlyOwner {
         minBuyOrderAmount = _min;
@@ -136,13 +137,19 @@ contract Exchange is AExchange {
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
         require(_token == address(divToken));
         require(_token == msg.sender);
+
+        Order storage sellOrder = placeSellOrder(_value, _from);
         
-        placeSellOrder(_value, _from);
+        // if _extraData == 0xef0c7686
+        if(_extraData.length == 4 && keccak256(_extraData) == keccak256(bytes4(keccak256("placeAndFillSellOrder")))) {
+            fillSellOrderWithBuyOrders(sellOrder, divPrice());    
+        }        
     }
 
     function buyOrdersLength() public view returns (uint256) {
         return buyOrders.length;
     }
+
     function sellOrdersLength() public view returns (uint256) {
         return sellOrders.length;
     }
@@ -229,11 +236,11 @@ contract Exchange is AExchange {
     }
 
     function buyOrderReserveLeft(Order storage _buyOrder, uint256 _divPrice) internal view returns(uint256 reserveLeft) {
-        return reserveLeft = toWei(divReserve(), _divPrice) + totalWeiFilled + _buyOrder.amount - _buyOrder.cumulativeAmount;
+        return reserveLeft = toWei(divReserve(), _divPrice) + totalBuyAmountFilled + _buyOrder.amount - _buyOrder.cumulativeAmount;
     }
 
     function sellOrderReserveLeft(Order storage _sellOrder, uint256 _divPrice) internal view returns(uint256 reserveLeft) {
-        return reserveLeft = toDiv(weiReserve(), _divPrice) + totalDivFilled + _sellOrder.amount - _sellOrder.cumulativeAmount;
+        return reserveLeft = toDiv(weiReserve(), _divPrice) + totalSellAmountFilled + _sellOrder.amount - _sellOrder.cumulativeAmount;
     }
 
     function orderAmountLeft(Order storage _order) internal view returns(uint256 amountLeft){
@@ -260,14 +267,18 @@ contract Exchange is AExchange {
 
     function fillBuyOrderWithSellOrders(Order storage _buyOrder, uint256 _divPrice) internal {
         uint256 buyAmountFilled = fillBuyOrderUpUntil(_buyOrder, _buyOrder.amount, _divPrice);
+        
         uint256 sellAmountToFill = toDiv(buyAmountFilled, _divPrice);
+        
         // Require that an equivalent total amount of sell order is filled
         require(fillFirstOpenSellOrdersUpUntil(sellAmountToFill, _divPrice) == sellAmountToFill);
     }
 
     function fillSellOrderWithBuyOrders(Order storage _sellOrder, uint256 _divPrice) internal {
         uint256 sellAmountFilled = fillSellOrderUpUntil(_sellOrder, _sellOrder.amount, _divPrice);
+        
         uint256 buyAmountToFill = toWei(sellAmountFilled, _divPrice);
+        
         // Require that an equivalent total amount of buy order is filled
         require(fillFirstOpenBuyOrdersUpUntil(buyAmountToFill, _divPrice) == buyAmountToFill);
     }
@@ -275,7 +286,7 @@ contract Exchange is AExchange {
     // Fills the first open sell orders until the _amount is reached, returns the amount it actually did fill
     function fillFirstOpenBuyOrdersUpUntil(uint256 _amount, uint256 _divPrice) internal returns (uint256 filledAmount){
         uint256 amountLeftToFill = _amount;
-
+        
         uint256 tempCursor = buyOrderCursor;
         while(amountLeftToFill > 0) {
             Order storage buyOrder = getNextBuyOrder(tempCursor);
@@ -335,7 +346,7 @@ contract Exchange is AExchange {
                 // Add the filled amount to the order
                 _buyOrder.amountFilled += filledAmount;
                 // Update the total amount of wei filled
-                totalWeiFilled += filledAmount;
+                totalBuyAmountFilled += filledAmount;
 
                 // Transfer the equivalent in DIV to the sender
                 divToken.transfer(_buyOrder.sender, toDiv(filledAmount, _divPrice));
@@ -367,7 +378,7 @@ contract Exchange is AExchange {
                 // Add the filled amount to the order
                 _sellOrder.amountFilled += filledAmount;
                 // Update the total amount of DIV filled
-                totalDivFilled += filledAmount;
+                totalSellAmountFilled += filledAmount;
                 
                 // Send the equivalent in wei to the sender
                 asyncSend(_sellOrder.sender, toWei(filledAmount, _divPrice));
