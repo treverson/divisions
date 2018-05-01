@@ -31,7 +31,7 @@ contract AStakeManager is Ownable {
     ATreasury public treasury;
     AExchange public exchange;
 
-    mapping(uint256 => mapping(uint256 => VoteMessage)) votes;
+    mapping(uint256 => mapping(uint256 => VoteMessage)) public votes;
     mapping(address => LogoutMessage) public logoutMessages;
     AWithdrawalBox[] public withdrawalBoxes;
 
@@ -52,18 +52,6 @@ contract AStakeManager is Ownable {
         uint256 _sourceEpoch
     )
         external;
-
-    function getVoteMessage(uint256 _validatorIndex, uint256 _targetEpoch)
-        public
-        view
-        returns (
-            bytes messageRLP,
-            bytes32 targetHash,
-            uint256 targetEpoch,
-            uint256 sourceEpoch,
-            uint256 castAt,
-            bool accepted
-        );
 
     function logout(
         AWithdrawalBox _withdrawalBox,
@@ -120,8 +108,9 @@ contract StakeManager is AStakeManager {
     }
 
     function getStakeAmount() public view returns (uint256 amount) {
-        // TODO implement actual calculation
-        return amount = address(treasury).balance;
+        uint256 availableAmount = address(treasury).balance + exchange.weiReserve();
+
+        return amount = availableAmount >= uint256(casper.MIN_DEPOSIT_SIZE()) ? availableAmount : 0;
     }
 
     function makeStakeDeposit() external {
@@ -159,30 +148,6 @@ contract StakeManager is AStakeManager {
             accepted: accepted
         });
         emit VoteCast(_messageRLP, _validatorIndex, _targetHash, _targetEpoch, _sourceEpoch);
-    }
-
-    function getVoteMessage(uint256 _validatorIndex, uint256 _targetEpoch)
-        public
-        view
-        returns (
-            bytes messageRLP,
-            bytes32 targetHash,
-            uint256 targetEpoch,
-            uint256 sourceEpoch,
-            uint256 castAt,
-            bool accepted
-        ) 
-    {
-        VoteMessage storage voteMsg = votes[_validatorIndex][_targetEpoch];
-
-        return (
-            voteMsg.messageRLP, 
-            voteMsg.targetHash, 
-            voteMsg.targetEpoch,
-            voteMsg.sourceEpoch, 
-            voteMsg.castAt,
-            voteMsg.accepted
-        );
     }
 
     function logout(

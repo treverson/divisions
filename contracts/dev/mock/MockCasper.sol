@@ -27,7 +27,7 @@ contract MockCasper is ACasper {
     {
         // current_epoch = int128(block.number) / epoch_length; //Division by 0
 
-        min_deposit_size = _min_deposit_size;
+        MIN_DEPOSIT_SIZE = _min_deposit_size;
         epoch_length = _epoch_length;
         dynasty_logout_delay = _dynasty_logout_delay;
         withdrawal_delay = _withdrawal_delay;
@@ -138,6 +138,10 @@ contract MockCasper is ACasper {
 
     function setRejectLogout(bool _reject) external {
         rejectLogout = _reject;
+    }
+
+    function setMinDepositSize(int128 _min) external {
+        MIN_DEPOSIT_SIZE = _min;
     }
 
     event DepositCalled(address validation_addr, address withdrawal_addr, uint256 amount);
