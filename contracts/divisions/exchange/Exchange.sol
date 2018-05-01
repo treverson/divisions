@@ -29,8 +29,8 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     // The minumum amount of a sell order in DIV
     uint256 public minSellOrderAmount;
     
-    function setMinBuyOrderAmount(uint256 _min) external;
-    function setMinSellOrderAmount(uint256 _max) external;
+    function setMinBuyOrderAmount(uint256 _min) public onlyOwner();
+    function setMinSellOrderAmount(uint256 _max) public onlyOwner();
 
     Order[] public buyOrders;
     //All buy orders with index < buyOrderCursor are finished
@@ -114,7 +114,12 @@ contract Exchange is AExchange {
 
     uint64 constant priceMultiplier = 1e18;
 
-    function Exchange(ADivisionsToken _divToken, AStakeManager _stakeManager) public {
+    function Exchange(
+        ADivisionsToken _divToken,
+        AStakeManager _stakeManager,
+        uint256 _minBuyOrderAmount,
+        uint256 _minSellOrderAmount
+    ) public {
         divToken = _divToken;
         stakeManager = _stakeManager;
         treasury = _stakeManager.treasury();
@@ -124,13 +129,18 @@ contract Exchange is AExchange {
 
         buyOrderCursor = 0;
         sellOrderCursor = 0;
+
+        setMinBuyOrderAmount(_minBuyOrderAmount);
+        setMinSellOrderAmount(_minSellOrderAmount);
     }
     
-    function setMinBuyOrderAmount(uint256 _min) external onlyOwner {
+    function setMinBuyOrderAmount(uint256 _min) public onlyOwner {
+        require(_min > 0);
         minBuyOrderAmount = _min;
     }
 
-    function setMinSellOrderAmount(uint256 _min) external onlyOwner {
+    function setMinSellOrderAmount(uint256 _min) public onlyOwner {
+        require(_min > 0);
         minSellOrderAmount = _min;
     }
 
@@ -193,7 +203,7 @@ contract Exchange is AExchange {
     }
 
     function placeSellOrder(uint256 _amount, address _sender) internal returns (Order storage sellOrder) {
-        require(_amount > 0);
+        require(_amount >= minSellOrderAmount);
         divToken.transferFrom(_sender, address(this), _amount);
 
         uint256 index = sellOrders.length;
@@ -403,6 +413,7 @@ contract Exchange is AExchange {
         assert(amountLeft <= weiReserve());
         
         buyOrder.amountCancelled += amountLeft;
+        buyOrder.finished = true;
         asyncSend(buyOrder.sender, amountLeft);
 
         emit BuyOrderCanceled(_index);
@@ -418,6 +429,7 @@ contract Exchange is AExchange {
         assert(amountLeft <= divReserve());
 
         sellOrder.amountCancelled += amountLeft;
+        sellOrder.finished = true;
         divToken.transfer(sellOrder.sender, amountLeft);
 
         emit SellOrderCanceled(_index);

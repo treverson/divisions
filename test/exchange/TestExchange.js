@@ -37,7 +37,12 @@ contract('Exchange', async accounts => {
 
     beforeEach(async () => {
         divToken = await MockDivisionsToken.new();
-        exchange = await Exchange.new(divToken.address, stakeManager.address);
+        exchange = await Exchange.new(
+            divToken.address,
+            stakeManager.address, 
+            web3.toWei(0.01, "ether"),
+            0.01e18
+        );
         await stakeManager.setExchange(exchange.address);
         await divToken.transferMintership(exchange.address);
         await treasury.setTotalPoolSize(0);
@@ -162,12 +167,62 @@ contract('Exchange', async accounts => {
         assert.equal(sellOrder.cumulativeAmount.valueOf(), sellAmount.valueOf(), "The cumulative amount is not correct");
         assert.equal(sellOrder.finished, false, "The order was initialized with finished set to true");
 
-        await divToken.mint(seller, 100);
-        await divToken.approve(exchange.address, 100);
     });
 
-    it('implements a mininum amount for orders', async () => {
-        assert.fail('TODO owner can set mininum amount for waitlisted orders to prevent flooding');
+    it('implements a mininum amount for orders', async ()=> {
+        let minBuyOrderAmount = web3.toBigNumber(0.1e18);
+        let minSellOrderAmount = web3.toBigNumber(web3.toWei(0.1, 'ether'));
+
+        await exchange.setMinBuyOrderAmount(minBuyOrderAmount);
+        assert.deepEqual(
+            await exchange.minBuyOrderAmount(),
+            minBuyOrderAmount,
+            "The minimum buy order amount was not set correctly"
+        );
+
+        await exchange.setMinSellOrderAmount(minSellOrderAmount);
+        assert.deepEqual(
+            await exchange.minSellOrderAmount(),
+            minSellOrderAmount,
+            "The minimum sell order amount was not set correctly"
+        );
+
+        await expectThrow(
+            exchange.placeBuyOrder({value: minBuyOrderAmount.sub(1)}),
+            "Cannot place buy orders with amount less than minBuyOrderAmount"
+        );
+
+        await divToken.mint(accounts[0], minSellOrderAmount);
+        await divToken.approve(exchange.address, minSellOrderAmount);
+        await expectThrow(
+            exchange.placeSellOrder(minSellOrderAmount.sub(1)),
+            "Cannot place sell order with amount less than minSellOrderAmount"
+        );
+        
+        await expectThrow(
+            exchange.setMinBuyOrderAmount(0),
+            "Cannot set the minimum buy order amount to 0"
+        );
+
+        await expectThrow(
+            exchange.setMinSellOrderAmount(0),
+            "Cannot set the minimum sell order amount to 0"
+        );
+
+        await expectThrow(
+            exchange.setMinBuyOrderAmount(web3.toWei(3, 'ether'), {from: accounts[1]}),
+            "Only the owner can set the mininum buy order amount"
+        );
+
+        await expectThrow(
+            exchange.setMinSellOrderAmount(3e18, {from: accounts[1]}),
+            "Only the owner can set the minimum sell order amount"
+        );
+
+        // Test that we can place orders with the minimum amounts without errors
+        await exchange.placeBuyOrder({value: minSellOrderAmount});
+        await exchange.placeSellOrder(minSellOrderAmount);
+        
     })
 
     it('places sell orders on receiveApproval from divToken', async () => {
@@ -590,7 +645,7 @@ contract('Exchange', async accounts => {
     });
 
     it('instantly fills buy and sell orders on placeAndFillSellOrder', async () => {
-        let sellAmount = web3.toBigNumber(3**18);
+        let sellAmount = web3.toBigNumber(3e18);
         let seller = accounts[1];
         await divToken.mint(seller, sellAmount);
         
@@ -684,6 +739,8 @@ contract('Exchange', async accounts => {
                 order.amount,
                 "The order was not canceled"
             );
+            
+            assert(order.finished, "The order was not finished");
 
             assert.deepEqual(
                 await exchange.payments(account),
@@ -735,7 +792,7 @@ contract('Exchange', async accounts => {
                 order.amount,
                 "The order was not canceled"
             );
-
+            assert(order.finished, "The order was not finished");
             assert.deepEqual(
                 await divToken.balanceOf(account),
                 accountBalanceBefore.add(order.amount),
