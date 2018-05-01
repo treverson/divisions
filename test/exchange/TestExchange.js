@@ -169,57 +169,57 @@ contract('Exchange', async accounts => {
     //     assert.fail('TODO owner can set mininum amount for waitlisted orders to prevent flooding');
     // })
 
-    it('places sell orders on receiveApproval from divToken', async () => {
-        let seller = accounts[5];
-        let sellAmount = web3.toBigNumber(6e18);
-        await divToken.mint(seller, sellAmount);
+    // it('places sell orders on receiveApproval from divToken', async () => {
+    //     let seller = accounts[5];
+    //     let sellAmount = web3.toBigNumber(6e18);
+    //     await divToken.mint(seller, sellAmount);
 
-        await divToken.approveAndCall(exchange.address, sellAmount, '', { from: seller });
+    //     await divToken.approveAndCall(exchange.address, sellAmount, '', { from: seller });
 
-        let sellOrderIndexes = await exchange.getSellOrderIndexes(seller);
+    //     let sellOrderIndexes = await exchange.getSellOrderIndexes(seller);
 
-        assert(sellOrderIndexes.length > 0, "The sell order index was not registered");
+    //     assert(sellOrderIndexes.length > 0, "The sell order index was not registered");
 
-        let sellOrderIndex = sellOrderIndexes[sellOrderIndexes.length - 1];
-        let sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
+    //     let sellOrderIndex = sellOrderIndexes[sellOrderIndexes.length - 1];
+    //     let sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
 
-        delete sellOrder.cumulativeAmount; //We're not testing this value in this spec
-        assert.deepEqual(
-            sellOrder,
-            {
-                sender: seller,
-                amount: sellAmount,
-                amountFilled: web3.toBigNumber(0),
-                amountCanceled: web3.toBigNumber(0),
-                index: sellOrderIndex,
-                finished: false
-            },
-            "The stored sell order was not correct"
-        );
+    //     delete sellOrder.cumulativeAmount; //We're not testing this value in this spec
+    //     assert.deepEqual(
+    //         sellOrder,
+    //         {
+    //             sender: seller,
+    //             amount: sellAmount,
+    //             amountFilled: web3.toBigNumber(0),
+    //             amountCanceled: web3.toBigNumber(0),
+    //             index: sellOrderIndex,
+    //             finished: false
+    //         },
+    //         "The stored sell order was not correct"
+    //     );
 
-        let buyer = accounts[2];
-        await divToken.mint(seller, sellAmount);
-        await exchange.placeBuyOrder({from: buyer, value: await exchange.toWei(sellAmount.times(2))});
+    //     let buyer = accounts[2];
+    //     await divToken.mint(seller, sellAmount);
+    //     await exchange.placeBuyOrder({from: buyer, value: await exchange.toWei(sellAmount.times(2))});
     
-        await divToken.approveAndCall(exchange.address, sellAmount, '0xef0c7686', { from: seller });
-        sellOrderIndexes = await exchange.getSellOrderIndexes(seller);
-        sellOrderIndex = sellOrderIndexes[sellOrderIndexes.length - 1];
-        sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
+    //     await divToken.approveAndCall(exchange.address, sellAmount, '0xef0c7686', { from: seller });
+    //     sellOrderIndexes = await exchange.getSellOrderIndexes(seller);
+    //     sellOrderIndex = sellOrderIndexes[sellOrderIndexes.length - 1];
+    //     sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
 
-        delete sellOrder.cumulativeAmount; //We're not testing this value in this spec
-        assert.deepEqual(
-            sellOrder,
-            {
-                sender: seller,
-                amount: sellAmount,
-                amountFilled: sellAmount,
-                amountCanceled: web3.toBigNumber(0),
-                index: sellOrderIndex,
-                finished: true
-            },
-            "Should immediatly fill if called data == 'bytes4(keccak256(\"placeAndFillSellOrder\"))'"
-        );
-    });
+    //     delete sellOrder.cumulativeAmount; //We're not testing this value in this spec
+    //     assert.deepEqual(
+    //         sellOrder,
+    //         {
+    //             sender: seller,
+    //             amount: sellAmount,
+    //             amountFilled: sellAmount,
+    //             amountCanceled: web3.toBigNumber(0),
+    //             index: sellOrderIndex,
+    //             finished: true
+    //         },
+    //         "Should immediatly fill if called data == 'bytes4(keccak256(\"placeAndFillSellOrder\"))'"
+    //     );
+    // });
 
     // it('logs an event on placeSellOrder', async () => {
     //     let seller = accounts[1];
@@ -532,13 +532,118 @@ contract('Exchange', async accounts => {
     // });
 
 
-    // it('instantly fills sell orders on placeAndFillBuyOrder', async () => {
-    //     assert.fail('TODO');
-    // });
+    it('instantly fills buy and sell orders on placeAndFillBuyOrder', async () => {
+        let buyAmount = web3.toBigNumber(web3.toWei(3, 'ether'));
+        let buyer = accounts[1];
+        let seller = accounts[2];
+        let sellAmount = await exchange.toDiv(buyAmount);
+        await divToken.mint(seller, sellAmount);
 
-    // it('instantly fills buy orders on placeAndFillSellOrder', async () => {
-    //     assert.fail('TODO');
-    // });
+        let sellOrderIndex;
+        let buyOrderIndex;
+        try {
+           sellOrderIndex =  (await transactionListener.listen(
+               divToken.approveAndCall.sendTransaction(exchange.address, sellAmount, '', { from: seller }),
+               exchange.SellOrderPlaced()
+            )).index;
+       
+       
+            buyOrderIndex = (await transactionListener.listen(
+                exchange.placeAndFillBuyOrder.sendTransaction({from: buyer, value: buyAmount}),
+                exchange.BuyOrderPlaced()
+            )).index;
+        } finally {
+            transactionListener.dispose();
+        }
+        
+
+        let buyOrder = new Order(await exchange.buyOrders(buyOrderIndex));
+        let sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
+        delete buyOrder.cumulativeAmount;
+        delete sellOrder.cumulativeAmount;
+        assert.deepEqual(
+            buyOrder,
+            {
+                sender: buyer,
+                amount: buyAmount,
+                amountFilled: buyAmount,
+                amountCanceled: web3.toBigNumber(0),
+                index: buyOrderIndex,
+                finished: true
+            },
+            "The buy order was not filled"
+        );
+
+        assert.deepEqual(
+            sellOrder,
+            {
+                sender: seller,
+                amount: sellAmount,
+                amountFilled: sellAmount,
+                amountCanceled: web3.toBigNumber(0),
+                index: sellOrderIndex,
+                finished: true
+            },
+            "The sell order was not filled"
+        );
+    });
+
+    it('instantly fills buy and sell orders on placeAndFillSellOrder', async () => {
+        let sellAmount = web3.toBigNumber(3**18);
+        let seller = accounts[1];
+        await divToken.mint(seller, sellAmount);
+        
+        let buyer = accounts[2];
+        let buyAmount = await exchange.toWei(sellAmount);
+        
+
+        let buyOrderIndex;
+        let sellOrderIndex;
+        try {
+            buyOrderIndex = (await transactionListener.listen(
+                exchange.placeBuyOrder.sendTransaction({from: buyer, value: buyAmount}),
+                exchange.BuyOrderPlaced()
+            )).index;
+            sellOrderIndex =  (await transactionListener.listen(
+                divToken.approveAndCall.sendTransaction(exchange.address, sellAmount, '0xef0c7686', { from: seller }),
+                exchange.SellOrderPlaced()
+             )).index;
+        } finally {
+            transactionListener.dispose();
+        }
+        
+        let sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
+        let buyOrder = new Order(await exchange.buyOrders(buyOrderIndex));
+        
+        delete sellOrder.cumulativeAmount;
+        delete buyOrder.cumulativeAmount;
+       
+        assert.deepEqual(
+            sellOrder,
+            {
+                sender: seller,
+                amount: sellAmount,
+                amountFilled: sellAmount,
+                amountCanceled: web3.toBigNumber(0),
+                index: sellOrderIndex,
+                finished: true
+            },
+            "The sell order was not filled"
+        );
+
+        assert.deepEqual(
+            buyOrder,
+            {
+                sender: buyer,
+                amount: buyAmount,
+                amountFilled: buyAmount,
+                amountCanceled: web3.toBigNumber(0),
+                index: buyOrderIndex,
+                finished: true
+            },
+            "The buy order was not filled"
+        );
+    });
 
 
     // it('cancels buy orders', async () => {t

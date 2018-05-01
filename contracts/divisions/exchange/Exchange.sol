@@ -429,7 +429,7 @@ contract Exchange is AExchange {
         uint256 totalPoolSize;
         uint256 totalSupply = divToken.totalSupply();
         
-        // calculate treasury.getTotalPoolSize() only once when nessecary
+        // calculate treasury.getTotalPoolSize() only once when necessary
         // as it is very expensive
         if(totalSupply == 0 || (totalPoolSize = treasury.getTotalPoolSize()) == 0)
             return price = 1 * priceMultiplier;
