@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const ADDRESS_JSON_PATH_P1 = "addresses-p1.json";
+const ADDRESS_JSON_PATH = "addresses.json";
 
 let MockCasper = artifacts.require('MockCasper');
 let Treasury = artifacts.require('Treasury');
@@ -15,6 +15,7 @@ const withdrawalDelay = 0;
 const validator = web3.eth.accounts[1];
 
 module.exports = async deployer => {
+    
     try {
         await deployer.deploy(
             MockCasper,
@@ -43,7 +44,7 @@ module.exports = async deployer => {
         };
         
         let addressesJson = JSON.stringify(addresses);
-        fs.writeFileSync(ADDRESS_JSON_PATH_P1, addressesJson);
+        fs.writeFileSync(ADDRESS_JSON_PATH, addressesJson);
     } catch (err) {
         console.log(err);
     }
