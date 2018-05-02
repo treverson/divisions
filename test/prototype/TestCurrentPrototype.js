@@ -17,6 +17,9 @@ const EPOCH_LENGTH = 20;
 const DYNASTY_LOGOUT_DELAY = 0;
 const WITHDRAWAL_DELAY = 0;
 
+const MIN_BUY_ORDER_AMOUNT = web3.toWei(0.01, 'ether');
+const MIN_SELL_ORDER_AMOUNT = 0.01e18;
+
 
 contract('Prototype 2', async accounts => {
     let casper;
@@ -32,7 +35,18 @@ contract('Prototype 2', async accounts => {
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
         treasury = await Treasury.new(casper.address);
         stakeManager = await StakeManager.new(casper.address, validator, treasury.address);
+        divToken = await DivisionToken.new();
+        exchange = await Exchange.new(
+            divToken.address,
+            stakeManager.address, 
+            MIN_BUY_ORDER_AMOUNT,
+            MIN_SELL_ORDER_AMOUNT
+        );
+
         await treasury.setStakeManager(stakeManager.address);
+        await treasury.setExchange(exchange.address);
+
+        await divToken.transferMinterRole(exchange.address);
     });
 
     it('Completes a staking cycle', async () => {

@@ -24,7 +24,7 @@ module.exports = async deployer => {
     try {
         await deployer.deploy(
             MockCasper,
-            minDepositSize,
+            MIN_DEPOSIT_SIZE,
             EPOCH_LENGTH,
             DYNASTY_LOGOUT_DELAY,
             WITHDRAWAL_DELAY
@@ -53,9 +53,10 @@ module.exports = async deployer => {
 
         let deployedTreasury = Treasury.at(Treasury.address);
         await deployedTreasury.setStakeManager(StakeManager.address);
-
+        await deployedTreasury.setExchange(Exchange.address);
         
-
+        let deployedDivToken = DivisionsToken.at(DivisionsToken.address);
+        await deployedDivToken.transferMintership(Exchange.address);
 
         let addresses = {
             casper: MockCasper.address,
