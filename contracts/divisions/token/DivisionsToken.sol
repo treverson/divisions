@@ -39,8 +39,8 @@ contract DivisionsToken is ADivisionsToken {
     }
 
     function mint(address _to, uint256 _amount) onlyMinter public {
-        require(_amount > 0);
-        require(_to != address(0));
+        require(_amount > 0, "Amount must be greater than 0");
+        require(_to != address(0), "Cannot mint to 0");
         
         totalSupply_ = totalSupply_.add(_amount);
         balances[_to] = balances[_to].add(_amount);
@@ -50,8 +50,8 @@ contract DivisionsToken is ADivisionsToken {
 
     // Minter can burn tokens which are in their own possesion
     function burn(uint256 _amount) onlyMinter public {
-        require(_amount > 0);
-        require(balanceOf(minter) >= _amount);
+        require(_amount > 0, "Amount must be greater than 0");
+        require(balanceOf(minter) >= _amount, "Not enough balance");
 
         balances[minter] = balances[minter].sub(_amount);
         totalSupply_ = totalSupply_.sub(_amount);
@@ -60,7 +60,7 @@ contract DivisionsToken is ADivisionsToken {
     }
 
     function transferMintership(address _minter) onlyOwner public {
-        require(_minter != address(0));
+        require(_minter != address(0), "Minter cannot be 0");
 
         emit MintershipTransferred(minter, _minter);
         
@@ -74,7 +74,7 @@ contract DivisionsToken is ADivisionsToken {
     }
 
     modifier onlyMinter() {
-        require(msg.sender == minter);
+        require(msg.sender == minter, "Can only be called by minter");
         _;
     }
 }

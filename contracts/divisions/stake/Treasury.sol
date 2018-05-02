@@ -56,14 +56,14 @@ contract Treasury is ATreasury {
     }
 
     function setStakeManager(AStakeManager _stakeManager) public onlyOwner {
-        require(_stakeManager != address(0));
+        require(_stakeManager != address(0), "StakeManager cannot be 0");
 
         emit StakeManagerSet(stakeManager, _stakeManager);
         stakeManager = _stakeManager;
     }
 
     function setExchange(AExchange _exchange) external onlyOwner {
-        require(_exchange != address(0));
+        require(_exchange != address(0), "Exchange cannot be 0");
 
         emit ExchangeSet(exchange, _exchange);
         exchange = _exchange;
@@ -142,7 +142,7 @@ contract Treasury is ATreasury {
 
 
     modifier onlyStakeManager() {
-        require(msg.sender == address(stakeManager));
+        require(msg.sender == address(stakeManager), "Can only be called by stakeMAnager");
         _;
     }
 }

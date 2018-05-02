@@ -38,20 +38,23 @@ contract('Prototype 2', async accounts => {
         divToken = await DivisionToken.new();
         exchange = await Exchange.new(
             divToken.address,
-            stakeManager.address, 
+            stakeManager.address,
             MIN_BUY_ORDER_AMOUNT,
             MIN_SELL_ORDER_AMOUNT
         );
 
         await treasury.setStakeManager(stakeManager.address);
         await treasury.setExchange(exchange.address);
+        await stakeManager.setExchange(exchange.address);
 
-        await divToken.transferMinterRole(exchange.address);
+        await divToken.transferMintership(exchange.address);
     });
 
     it('Completes a staking cycle', async () => {
+        // Place buy order
+        await exchange.placeBuyOrder({ value: web3.toWei(10, 'ether') });
+
         // Deposit
-        await treasury.sendTransaction({ value: web3.toWei(5, 'ether'), from: accounts[9] });
         let stakeAmount = await stakeManager.getStakeableAmount();
 
         let out = await expectEvent(
@@ -63,6 +66,8 @@ contract('Prototype 2', async accounts => {
                 amount: stakeAmount
             }
         );
+
+        let divBalance = await divToken.balanceOf(accounts[0]);
 
         let withdrawalBox = WithdrawalBox.at(out.withdrawal_addr);
         let validatorIndex = await casper.validator_indexes(withdrawalBox.address);
@@ -107,5 +112,27 @@ contract('Prototype 2', async accounts => {
             treasury.Deposit(),
             { from: withdrawalBox.address, amount: stakeAmount }
         )
+
+        // Place sell order
+        await divToken.approveAndCall(
+            exchange.address,
+            divBalance,
+            ""
+        );
+
+        let weiReserve = await exchange.weiReserve();
+        let divReserve = await exchange.divReserve();
+        let price = await exchange.divPrice();
+        let divReserveInWei = await exchange.toWei(divReserve);
+
+
+        // Refill exchange
+        await stakeManager.refillExchange();
+        
+        assert.deepEqual(
+            await exchange.payments(accounts[0]),
+            web3.toBigNumber(web3.toWei(10, 'ether')),
+            "The sell order was not filled"
+        );
     });
 });

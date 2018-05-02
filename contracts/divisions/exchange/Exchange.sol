@@ -135,18 +135,18 @@ contract Exchange is AExchange {
     }
     
     function setMinBuyOrderAmount(uint256 _min) public onlyOwner {
-        require(_min > 0);
+        require(_min > 0, "The minimum must be greater than 0");
         minBuyOrderAmount = _min;
     }
 
     function setMinSellOrderAmount(uint256 _min) public onlyOwner {
-        require(_min > 0);
+        require(_min > 0, "The minimum must be greater than 0");
         minSellOrderAmount = _min;
     }
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
-        require(_token == address(divToken));
-        require(_token == msg.sender);
+        require(_token == address(divToken), "Only accepts approvals from divToken");
+        require(address(divToken) == msg.sender, "Only accepts calls from divToken");
 
         Order storage sellOrder = placeSellOrder(_value, _from);
         
@@ -177,7 +177,7 @@ contract Exchange is AExchange {
     }
 
     function placeBuyOrder(uint256 _amount, address _sender) internal returns (Order storage buyOrder) {
-        require(_amount >= minBuyOrderAmount);
+        require(_amount >= minBuyOrderAmount, "Amount must be greater than minBuyOrderAmount");
 
         uint256 index = buyOrders.length;
 
@@ -203,7 +203,7 @@ contract Exchange is AExchange {
     }
 
     function placeSellOrder(uint256 _amount, address _sender) internal returns (Order storage sellOrder) {
-        require(_amount >= minSellOrderAmount);
+        require(_amount >= minSellOrderAmount, "Amount must be greater than minSellOrderAmount");
         divToken.transferFrom(_sender, address(this), _amount);
 
         uint256 index = sellOrders.length;
@@ -281,7 +281,7 @@ contract Exchange is AExchange {
         uint256 sellAmountToFill = toDiv(buyAmountFilled, _divPrice);
         
         // Require that an equivalent total amount of sell order is filled
-        require(fillFirstOpenSellOrdersUpUntil(sellAmountToFill, _divPrice) == sellAmountToFill);
+        require(fillFirstOpenSellOrdersUpUntil(sellAmountToFill, _divPrice) == sellAmountToFill, "Could not fill equivalent amount of sell orders");
     }
 
     function fillSellOrderWithBuyOrders(Order storage _sellOrder, uint256 _divPrice) internal {
@@ -290,7 +290,7 @@ contract Exchange is AExchange {
         uint256 buyAmountToFill = toWei(sellAmountFilled, _divPrice);
         
         // Require that an equivalent total amount of buy order is filled
-        require(fillFirstOpenBuyOrdersUpUntil(buyAmountToFill, _divPrice) == buyAmountToFill);
+        require(fillFirstOpenBuyOrdersUpUntil(buyAmountToFill, _divPrice) == buyAmountToFill, "Could not fill equivalent amount of buy orders");
     }
 
     // Fills the first open sell orders until the _amount is reached, returns the amount it actually did fill
@@ -405,11 +405,11 @@ contract Exchange is AExchange {
 
     function cancelBuyOrder(uint256 _index) external {
         Order storage buyOrder = buyOrders[_index];
-        require(msg.sender == buyOrder.sender);
+        require(msg.sender == buyOrder.sender, "Only the sender of the order can cancel it");
 
         uint256 amountLeft = orderAmountLeft(buyOrder);
 
-        require(amountLeft > 0);
+        require(amountLeft > 0, "Can only cancel unfinished orders");
         assert(amountLeft <= weiReserve());
         
         buyOrder.amountCancelled += amountLeft;
@@ -421,11 +421,11 @@ contract Exchange is AExchange {
 
     function cancelSellOrder(uint256 _index) external {
         Order storage sellOrder = sellOrders[_index];
-        require(msg.sender == sellOrder.sender);
+        require(msg.sender == sellOrder.sender, "Only the sender of the order can cancel it");
 
         uint256 amountLeft = orderAmountLeft(sellOrder);
 
-        require(amountLeft > 0);
+        require(amountLeft > 0, "Can only cancel unfinished orders");
         assert(amountLeft <= divReserve());
 
         sellOrder.amountCancelled += amountLeft;
@@ -466,7 +466,7 @@ contract Exchange is AExchange {
     }
 
     function transferWeiToTreasury(uint256 _amount) external onlyStakeManager {
-        require(weiReserve() >= _amount);
+        require(weiReserve() >= _amount, "Not enough wei reserve");
         uint256 price = divPrice();
 
         divToken.mint(address(this), toDiv(_amount, price));
@@ -479,7 +479,7 @@ contract Exchange is AExchange {
     function handleEtherDeposit() external payable {
         uint256 price = divPrice();
         uint256 amountLeftToFill = toDiv(msg.value, price);
-        require(divReserve() >= amountLeftToFill);
+        require(divReserve() >= amountLeftToFill, "Not enough DIV reserve");
         
         divToken.burn(amountLeftToFill);
         fillFirstOpenSellOrdersUpUntil(amountLeftToFill, price);
@@ -514,7 +514,7 @@ contract Exchange is AExchange {
     }
 
     modifier onlyStakeManager() {
-        require(msg.sender == address(stakeManager));
+        require(msg.sender == address(stakeManager), "Can only be called by stakeManager");
         _;
     }
 }

@@ -93,19 +93,19 @@ contract StakeManager is AStakeManager {
     }
 
     function transferValidatorship(address _validator) external onlyOwner() {
-        require(_validator != address(0));
+        require(_validator != address(0), "Validator can not be 0");
         emit ValidatorshipTransferred(validator, _validator);
         validator = _validator;
     }
 
     function setTreasury(ATreasury _treasury) external onlyOwner() {
-        require(_treasury != address(0));
+        require(_treasury != address(0), "Treasury cannot be 0");
         emit TreasurySet(treasury, _treasury);
         treasury = _treasury;
     }
 
     function setExchange(AExchange _exchange) external onlyOwner() {
-        require(_exchange != address(0));
+        require(_exchange != address(0), "Exchange cannot be 0");
         emit ExchangeSet(exchange, _exchange);
         exchange = _exchange;
     }
@@ -117,13 +117,13 @@ contract StakeManager is AStakeManager {
     }
 
     function refillExchange() external {
-        uint256 refillSize = exchange.weiReserve() - exchange.toWei(exchange.divReserve());
+        uint256 refillSize = exchange.toWei(exchange.divReserve()).sub(exchange.weiReserve());
         treasury.transferToExchange(refillSize);
     }
 
     function makeStakeDeposit() external {
         uint256 depositSize = getStakeableAmount();
-        require(depositSize > 0);
+        require(depositSize > 0, "Deposit must be greater that 0");
 
         exchange.transferWeiToTreasury(exchange.weiReserve());
 
@@ -181,7 +181,7 @@ contract StakeManager is AStakeManager {
     }
 
     modifier onlyValidator() {
-        require(msg.sender == validator);
+        require(msg.sender == validator, "Can only be called by the validator");
         _;
     }
 

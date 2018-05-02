@@ -19,8 +19,6 @@ contract AWithdrawalBox {
 contract WithdrawalBox is AWithdrawalBox {
 
     constructor(ATreasury _treasury) public {
-        require(_treasury != msg.sender);
-
         deployedAt = block.number;
         treasury = _treasury;
 
@@ -38,12 +36,12 @@ contract WithdrawalBox is AWithdrawalBox {
     }
 
     modifier onlyStakeManager() {
-        require(msg.sender == address(stakeManager));
+        require(msg.sender == address(stakeManager), "Can only be called by stakeManager");
         _;
     }
 
     modifier onlyTreasury() {
-        require(msg.sender == address(treasury));
+        require(msg.sender == address(treasury), "Can only be called by treasury");
         _;
     }
 }
