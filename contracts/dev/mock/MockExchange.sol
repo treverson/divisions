@@ -114,9 +114,9 @@ contract MockExchange is AExchange {
         emit TransferWeiToTreasuryCalled(_amount);
     }
     
-    function handleEtherDeposit() external payable {
+    function receiveEtherDeposit() external payable {
         weiReserve_ += msg.value;
-        emit HandleEtherDepositCalled(msg.value);
+        emit ReceiveEtherDepositCalled(msg.value);
     }
 
     function setDivReserve(uint256 _value) external {
@@ -128,6 +128,6 @@ contract MockExchange is AExchange {
     }
 
     event TransferWeiToTreasuryCalled(uint256 amount);
-    event HandleEtherDepositCalled(uint256 value);
+    event ReceiveEtherDepositCalled(uint256 value);
 
 }

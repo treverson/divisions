@@ -978,7 +978,7 @@ contract('Exchange', async accounts => {
         let totalDivSupplyBefore = await divToken.totalSupply();
         let totalSellAmountInWei = await exchange.toWei(totalSellAmount);
 
-        await exchange.handleEtherDeposit({ value: totalSellAmountInWei });
+        await exchange.receiveEtherDeposit({ value: totalSellAmountInWei });
 
         let totalDivSupplyAfter = await divToken.totalSupply();
 

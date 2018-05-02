@@ -75,7 +75,7 @@ contract Treasury is ATreasury {
     }
 
     function transferToExchange(uint256 _amount) external onlyStakeManager {
-        exchange.handleEtherDeposit.value(_amount)();
+        exchange.receiveEtherDeposit.value(_amount)();
         emit Transfer(address(exchange), _amount);
     }
 

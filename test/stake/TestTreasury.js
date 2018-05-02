@@ -142,7 +142,7 @@ contract('Treasury', async accounts => {
 
         await expectEvent(
             treasury.transferToExchange.sendTransaction(sentEther, { from: stakeManager }),
-            exchange.HandleEtherDepositCalled(),
+            exchange.ReceiveEtherDepositCalled(),
             { value: sentEther }
         );
     });

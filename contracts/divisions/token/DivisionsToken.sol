@@ -1,12 +1,12 @@
 pragma solidity 0.4.23;
 
-import "../../../node_modules/zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
+
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
 
-import "./ITokenRecipient.sol";
+import "./CallingToken.sol";
 
-contract ADivisionsToken is StandardToken, Ownable {
+contract ADivisionsToken is CallingToken, Ownable {
     address public minter;
 
     string public symbol;
@@ -16,8 +16,6 @@ contract ADivisionsToken is StandardToken, Ownable {
     function mint(address _to, uint256 _amount) public;
     function burn(uint256 _amount) public;
     function transferMintership(address _minter) onlyOwner public;
-
-    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool success);
     
     event Burn(uint256 amount);
     event Mint(address recipient, uint256 amount);
@@ -66,13 +64,7 @@ contract DivisionsToken is ADivisionsToken {
         
         minter = _minter;
     }
-
-    function approveAndCall(ITokenRecipient _spender, uint256 _value, bytes _extraData) external payable returns(bool success) {
-        approve(_spender, _value);
-        _spender.receiveApproval(msg.sender, _value, address(this), _extraData);
-        return success = true;
-    }
-
+    
     modifier onlyMinter() {
         require(msg.sender == minter, "Can only be called by minter");
         _;

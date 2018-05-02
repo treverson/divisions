@@ -99,7 +99,7 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     function transferWeiToTreasury(uint256 _amount) external;
     //Fills open sell orders with the received ether deposit,
     //burning an equivalent amount of DIV
-    function handleEtherDeposit() external payable;
+    function receiveEtherDeposit() external payable;
 
     event BuyOrderPlaced(uint256 index, address sender, uint256 amount);
     event BuyOrderFilled(uint256 indexed index, uint256 amountFilled);
@@ -476,7 +476,7 @@ contract Exchange is AExchange {
         treasury.deposit.value(_amount)();
     }
 
-    function handleEtherDeposit() external payable {
+    function receiveEtherDeposit() external payable {
         uint256 price = divPrice();
         uint256 amountLeftToFill = toDiv(msg.value, price);
         require(divReserve() >= amountLeftToFill, "Not enough DIV reserve");
