@@ -41,7 +41,10 @@ contract AStakeManager is Ownable {
     function setTreasury(ATreasury _treasury) external onlyOwner();
     function setExchange(AExchange _exchange) external onlyOwner();
 
-    function getStakeAmount() public view returns (uint256 amount);
+    // The amount of ether that can be staked currently
+    function getStakeableAmount() public view returns (uint256 amount);
+
+    // Makes a stake deposit with Casper
     function makeStakeDeposit() external;
     
     function vote(
@@ -107,23 +110,31 @@ contract StakeManager is AStakeManager {
         exchange = _exchange;
     }
 
-    function getStakeAmount() public view returns (uint256 amount) {
+    function getStakeableAmount() public view returns (uint256 amount) {
         uint256 availableAmount = address(treasury).balance + exchange.weiReserve();
 
         return amount = availableAmount >= uint256(casper.MIN_DEPOSIT_SIZE()) ? availableAmount : 0;
     }
 
+    function refillExchange() external {
+        uint256 refillSize = exchange.weiReserve() - exchange.toWei(exchange.divReserve());
+        treasury.transferToExchange(refillSize);
+    }
+
     function makeStakeDeposit() external {
-        // TODO have the exchange deposit ether in the treasury
+        uint256 depositSize = getStakeableAmount();
+        require(depositSize > 0);
+
+        exchange.transferWeiToTreasury(exchange.weiReserve());
+
         AWithdrawalBox withdrawalBox = new WithdrawalBox(treasury);
-        
-        uint256 depositSize = getStakeAmount();
 
         treasury.stake(depositSize, validator, withdrawalBox);
 
         withdrawalBoxes.push(withdrawalBox);
 
         emit WithdrawalBoxDeployed(withdrawalBox);
+        
     }
     
     function vote(

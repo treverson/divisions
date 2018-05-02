@@ -23,13 +23,13 @@ contract MockStakeManager is AStakeManager {
 
     }
 
-    function getStakeAmount() public view returns (uint256 amount){ 
+    function getStakeableAmount() public view returns (uint256 amount){ 
         return amount = address(treasury).balance;
     }
     function makeStakeDeposit() external{
         AWithdrawalBox withdrawalBox = new MockWithdrawalBox();
         
-        uint256 depositSize = getStakeAmount();
+        uint256 depositSize = getStakeableAmount();
 
         treasury.stake(depositSize, validator, withdrawalBox);
 

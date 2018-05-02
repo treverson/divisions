@@ -15,6 +15,10 @@ contract MockTreasury is ATreasury {
         stakeManager = _stakeManager;
     }
 
+    function setExchange(AExchange _exchange) external onlyOwner {
+        exchange = _exchange;
+    }
+
     function transfer(address _to, uint256 _amount) external {
         _to.transfer(_amount);
     }
@@ -24,6 +28,10 @@ contract MockTreasury is ATreasury {
 
     function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external {
         emit StakeCalled(_amount, _validatorAddress, _withdrawalBox);
+    }
+
+    function transferToExchange(uint256 _amount) external {
+        emit TransferToExchangeCalled(_amount);
     }
 
     function sweep(AWithdrawalBox _withdrawalBox) external {
@@ -39,6 +47,7 @@ contract MockTreasury is ATreasury {
     }
 
     event DepositCalled(address from, uint256 value);
+    event TransferToExchangeCalled(uint256 amount);
     event StakeCalled(uint256 amount, address indexed validatorAddress, AWithdrawalBox indexed withdrawalBox);
     event SweepCalled(AWithdrawalBox withdrawalBox);
 }

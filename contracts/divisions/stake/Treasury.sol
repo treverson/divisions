@@ -9,14 +9,18 @@ import "./WithdrawalBox.sol";
 
 contract ATreasury is Ownable {
     AStakeManager public stakeManager;
+    AExchange public exchange;
     ACasper public casper;
 
     function() external payable;
 
     function setStakeManager(AStakeManager _stakeManager) public onlyOwner();
+    function setExchange(AExchange _exchange) external onlyOwner();
 
     function transfer(address _to, uint256 _amount) external;
     function deposit() external payable;
+
+    function transferToExchange(uint256 _amount) external;
 
     function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external;
 
@@ -25,6 +29,7 @@ contract ATreasury is Ownable {
     function getTotalPoolSize() external view returns(uint256 size);
 
     event StakeManagerSet(AStakeManager indexed previousStakeManager, AStakeManager indexed newStakeManager);
+    event ExchangeSet(AExchange indexed previousExchange, AExchange indexed newExchange);
 
     event Transfer(address indexed to, uint256 amount);
     event Deposit(address indexed from, uint256 amount);
@@ -34,6 +39,13 @@ contract ATreasury is Ownable {
 
 contract Treasury is ATreasury {
     using SafeMath for uint256;
+
+    struct TotalPoolSizeCache {
+        bytes32 txHash;
+        uint256 totalPoolSize;
+    }
+
+    TotalPoolSizeCache private poolSizeCache;
 
     constructor(ACasper _casper) public {
         casper = _casper;
@@ -50,9 +62,21 @@ contract Treasury is ATreasury {
         stakeManager = _stakeManager;
     }
 
+    function setExchange(AExchange _exchange) external onlyOwner {
+        require(_exchange != address(0));
+
+        emit ExchangeSet(exchange, _exchange);
+        exchange = _exchange;
+    }
+
     function transfer(address _to, uint256 _amount) external onlyStakeManager {
         _to.transfer(_amount);
         emit Transfer(_to, _amount);
+    }
+
+    function transferToExchange(uint256 _amount) external onlyStakeManager {
+        exchange.handleEtherDeposit.value(_amount)();
+        emit Transfer(address(exchange), _amount);
     }
 
     function deposit() external payable {

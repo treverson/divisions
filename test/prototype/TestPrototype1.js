@@ -34,7 +34,7 @@ contract('Prototype 1', async accounts => {
     it('Completes a staking cycle', async () => {
         // Deposit
         await treasury.sendTransaction({ value: web3.toWei(5, 'ether'), from: accounts[9] });
-        let stakeAmount = await stakeManager.getStakeAmount();
+        let stakeAmount = await stakeManager.getStakeableAmount();
 
         let out = await expectEvent(
             stakeManager.makeStakeDeposit.sendTransaction(),

@@ -92,7 +92,15 @@ contract('Treasury', async accounts => {
         );
     });
 
-    it('sends ether to the exchange when nessecary', async () => {
+    it('sets the exchange', async () => {
+
+    });
+
+    it('logs an event on setExchange', async () => {
+
+    });
+
+    it('sends ether to the exchange', async () => {
         assert.fail('TODO');
     });
 
