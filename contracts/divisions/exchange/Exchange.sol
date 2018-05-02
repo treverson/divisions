@@ -114,7 +114,7 @@ contract Exchange is AExchange {
 
     uint64 constant priceMultiplier = 1e18;
 
-    function Exchange(
+    constructor(
         ADivisionsToken _divToken,
         AStakeManager _stakeManager,
         uint256 _minBuyOrderAmount,
