@@ -9,7 +9,7 @@ const AWithdrawalBox = artifacts.require('AWithdrawalBox');
 const MockCasper = artifacts.require('MockCasper');
 const MockWithdrawalBox = artifacts.require('MockWithdrawalBox');
 const MockStakeManager = artifacts.require('MockStakeManager');
-
+const MockExchange = artifacts.require('MockExchange');
 
 const minDepositSize = web3.toWei(1, 'ether');
 const epochLength = 20;
@@ -20,15 +20,18 @@ contract('Treasury', async accounts => {
     let treasury;
     let casper;
     let stakeManager;
-
+    let exchange;
     before(async () => {
         stakeManager = accounts[1];
+
         casper = await MockCasper.new(minDepositSize, epochLength, dynastyLogoutDelay, withdrawalDelay);
         treasury = await Treasury.new(casper.address);
+        exchange = await MockExchange.new(treasury.address);
     });
 
     beforeEach(async () => {
         await treasury.setStakeManager(stakeManager);
+        await treasury.setExchange(exchange.address);
     })
 
     it('sets the StakeManager', async () => {
@@ -93,19 +96,69 @@ contract('Treasury', async accounts => {
     });
 
     it('sets the exchange', async () => {
+        let expectedExchange = accounts[5];
 
+        await treasury.setExchange(expectedExchange);
+
+        let actualExchange = await treasury.exchange();
+
+        assert.equal(
+            actualExchange,
+            expectedExchange,
+            "The exchange was not set"
+        );
+
+        await expectThrow(
+            treasury.setExchange(exchange.address, { from: accounts[1] }),
+            "Only the owner can set the exchange"
+        );
     });
 
     it('logs an event on setExchange', async () => {
+        let newExchange = accounts[5];
+        let oldExchange = await treasury.exchange();
 
+        await expectEvent(
+            treasury.setExchange.sendTransaction(newExchange),
+            treasury.ExchangeSet(),
+            {
+                previousExchange: oldExchange.exchange,
+                newExchange: newExchange
+            }
+        );
     });
 
     it('sends ether to the exchange', async () => {
-        assert.fail('TODO');
+        let stakeManager = accounts[1];
+        await treasury.setStakeManager(stakeManager);
+
+        let sentEther = web3.toBigNumber(web3.toWei(3, 'ether'));
+        await treasury.deposit({ value: sentEther, from: accounts[5] });
+
+        await expectThrow(
+            treasury.transferToExchange(sentEther),
+            "Only the stake manager can have the Treasury transfer ether to the exchange"
+        );
+
+        await expectEvent(
+            treasury.transferToExchange.sendTransaction(sentEther, { from: stakeManager }),
+            exchange.HandleEtherDepositCalled(),
+            { value: sentEther }
+        );
     });
 
     it('logs an event on sendToExchange()', async () => {
-        assert.fail('TODO');
+        let stakeManager = accounts[1];
+        await treasury.setStakeManager(stakeManager);
+
+        let sentEther = web3.toBigNumber(web3.toWei(3, 'ether'));
+        await treasury.deposit({ value: sentEther, from: accounts[5] });
+
+        await expectEvent(
+            treasury.transferToExchange.sendTransaction(sentEther, { from: stakeManager }),
+            treasury.Transfer(),
+            { to: exchange.address, amount: sentEther }
+        );
     });
 
     it('logs an event on deposit', async () => {
