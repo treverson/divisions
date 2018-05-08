@@ -112,8 +112,8 @@ contract StakeManager is AStakeManager {
 
     function getStakeableAmount() public view returns (uint256 amount) {
         uint256 availableAmount = address(treasury).balance + exchange.weiReserve();
-
-        return amount = availableAmount >= uint256(casper.MIN_DEPOSIT_SIZE()) ? availableAmount : 0;
+        uint256 minDepositSize = uint256(casper.MIN_DEPOSIT_SIZE());
+        return amount = availableAmount >= minDepositSize ? minDepositSize : 0;
     }
 
     function refillExchange() external {
@@ -148,7 +148,8 @@ contract StakeManager is AStakeManager {
         onlyValidator
     {
         // To store the vote even when it's rejected, use low-level call
-        bool accepted = address(casper).call(bytes4(keccak256("vote(bytes)")), _messageRLP);
+        bool accepted = address(casper)
+            .call(bytes4(keccak256("vote(bytes)")), _messageRLP);
         
         votes[_validatorIndex][_targetEpoch] = VoteMessage({
             messageRLP: _messageRLP,

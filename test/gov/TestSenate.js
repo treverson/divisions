@@ -2,6 +2,7 @@ const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 let TransactionListener = require('../../test-helpers/TransactionListener');
 let transactionListener = new TransactionListener();
+const timeout = require('../../test-helpers/timeout');
 const BigNumber = require('bignumber.js');
 
 // ============ Test Senate ============ //
@@ -9,28 +10,35 @@ const BigNumber = require('bignumber.js');
 const Senate = artifacts.require('Senate');
 const AddressBook = artifacts.require('AddressBook');
 
-const MockGovernanceToken = artifacts.require('MockGovernanceToken');
 const MockTokenRecipient = artifacts.require('MockTokenRecipient');
+const MockTokenVault = artifacts.require('MockTokenVault');
 
-const DEBATING_PERIOD_MS = 1000 * 20; //20s
-const GOV_TOKEN_INITIAL_SUPPLY = 180e6 * 1e18;
+const DEBATING_PERIOD_SECS = 20; 
 
 contract('Senate', async accounts => {
     let senate;
     let addressBook;
-    let govToken;
+    let tokenVault;
     let president = accounts[1];
 
     before(async () => {
-        govToken = await MockGovernanceToken.new(GOV_TOKEN_INITIAL_SUPPLY);
         addressBook = await AddressBook.new(accounts[0]);
 
+        tokenVault = await MockTokenVault.new(addressBook.address);
+
+        await addressBook.registerEntry(
+            tokenVault.address
+        );
+
         senate = await Senate.new(
-            govToken.address,
             addressBook.address,
             president,
-            DEBATING_PERIOD_MS);
+            DEBATING_PERIOD_SECS);
     });
+
+    after(() => {
+        transactionListener.dispose();
+    })
 
     // it('makes proposals', async () => {
     //     let target = accounts[6];
@@ -91,21 +99,139 @@ contract('Senate', async accounts => {
     // });
 
     it('stores votes on proposals', async () => {
+        await tokenVault.lockTokens(100e18);
+
+        let weight = (await tokenVault.lockers(accounts[0]))[0];
+
         let target = accounts[6];
         let data = web3.toHex("iwannamakeaproposal");
         let value = web3.toBigNumber(web3.toWei(2, 'ether'));
         let description = "This is a description";
 
         let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, data, value, description, {from: president}),
+            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
             senate.ProposalMade()
         )).index;
 
-        console.log(proposalIndex.valueOf());
+        let voteIndex = (await transactionListener.listen(
+            senate.vote.sendTransaction(proposalIndex, true),
+            senate.Voted()
+        )).voteIndex;
+
+        let vote = new Vote(await senate.votes(proposalIndex, voteIndex));
+
+        assert.deepEqual(
+            vote,
+            {
+                voter: accounts[0],
+                weight: weight,
+                inSupport: true
+            },
+            "The vote was not stored correctly"
+        );
+
+        await expectThrow(
+            senate.vote(proposalIndex, true),
+            "Cannot vote more than once"
+        );
+
+        let lockedTokens = (await tokenVault.lockers(accounts[1]))[0];
+        await tokenVault.unlockTokens(lockedTokens, { from: accounts[1] });
+
+        await expectThrow(
+            senate.vote(proposalIndex, false, { from: accounts[1] }),
+            "Can only vote when more than 1 tokens have been locked"
+        );
+        
+        await timeout.resolve(3000);
+
+        await tokenVault.lockTokens(weight, { from: accounts[1] });
+
+        await expectThrow(
+            senate.vote(proposalIndex, true, { from: accounts[1] }),
+            "Can only vote when the amount of locked tokens was increased last before the creation of the proposal"
+        );
     });
 
+    // it('stores the voter\'s address with the proposal', async () => {
+    //     await tokenVault.lockTokens(100e18);
+
+    //     let weight = (await tokenVault.lockers(accounts[0]))[0];
+
+    //     let target = accounts[6];
+    //     let data = web3.toHex("iwannamakeaproposal");
+    //     let value = web3.toBigNumber(web3.toWei(2, 'ether'));
+    //     let description = "This is a description";
+
+    //     let proposalIndex = (await transactionListener.listen(
+    //         senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
+    //         senate.ProposalMade()
+    //     )).index;
+
+    //     let expectedVoteIndex = (await transactionListener.listen(
+    //         senate.vote.sendTransaction(proposalIndex, true),
+    //         senate.Voted()
+    //     )).voteIndex;
+
+    //     let actualVoteIndex = await senate.voteIndexes(proposalIndex, accounts[0]);
+
+    //     assert.deepEqual(
+    //         actualVoteIndex,
+    //         expectedVoteIndex,
+    //         "The vote index was not correct"
+    //     );
+    // });
+
+    // it('only allows voting during the debation period', async () => {
+    //     await tokenVault.lockTokens(100e18);
+
+    //     let weight = (await tokenVault.lockers(accounts[0]))[0];
+
+    //     let target = accounts[6];
+    //     let data = web3.toHex("iwannamakeaproposal");
+    //     let value = web3.toBigNumber(web3.toWei(2, 'ether'));
+    //     let description = "This is a description";
+
+    //     let proposalIndex = (await transactionListener.listen(
+    //         senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
+    //         senate.ProposalMade()
+    //     )).index;
+        
+    //     await timeout.resolve((DEBATING_PERIOD_SECS + 3) * 1000);
+        
+    //     await expectThrow(
+    //         senate.vote(proposalIndex, true),
+    //         "Cannot vote after the debating period has ended"
+    //     );
+    // });
+
     // it('logs an event on vote', async () => {
-    //     assert.fail('TODO');
+    //     await tokenVault.lockTokens(100e18);
+
+    //     let weight = (await tokenVault.lockers(accounts[0]))[0];
+
+    //     let target = accounts[6];
+    //     let data = web3.toHex("iwannamakeaproposal");
+    //     let value = web3.toBigNumber(web3.toWei(2, 'ether'));
+    //     let description = "This is a description";
+
+    //     let proposalIndex = (await transactionListener.listen(
+    //         senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
+    //         senate.ProposalMade()
+    //     )).index;
+
+    //     await expectEvent(
+    //         senate.vote.sendTransaction(proposalIndex, true),
+    //         senate.Voted(),
+    //         {
+    //             proposalIndex: proposalIndex,
+    //             voteIndex: '@any',
+    //             voter: accounts[0],
+    //             inSupport: true,
+    //             weight: weight
+    //         }
+    //     );
+
     // });
 
     // it('executes proposals', async () => {
@@ -138,5 +264,13 @@ class Proposal {
         this.succeeded = proposalArray[6];
         this.totalYea = proposalArray[7];
         this.totalNay = proposalArray[8];
+    }
+}
+
+class Vote {
+    constructor(voteArray) {
+        this.voter = voteArray[0];
+        this.weight = voteArray[1];
+        this.inSupport = voteArray[2];
     }
 }

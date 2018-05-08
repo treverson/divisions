@@ -28,7 +28,6 @@ contract ASenate {
         bool inSupport;
     }
     
-    AGovernanceToken public govToken;
     AAddressBook addressBook;
     address public president;
 
@@ -71,7 +70,7 @@ contract ASenate {
     function changeVotingRules(uint256 _debatingPeriodMs) external;
 
     event ProposalMade(uint256 index);
-    event Voted(uint256 indexed proposalIndex, address voter, bool inSupport, uint256 weight);
+    event Voted(uint256 indexed proposalIndex, uint256 voteIndex, address voter, bool inSupport, uint256 weight);
     event ProposalExecuted(uint256 indexed index, bool success);
 
     event VotingRulesChanged();
@@ -79,14 +78,12 @@ contract ASenate {
 
 contract Senate is ASenate {
     constructor(
-        AGovernanceToken _govToken,
         AAddressBook _addressBook,
         address _president,
         uint256 _debatingPeriodMs
     )
         public 
     {
-        govToken = _govToken;
         president = _president;
         addressBook = _addressBook;
         debatingPeriodMs = _debatingPeriodMs;
@@ -142,11 +139,7 @@ contract Senate is ASenate {
 
         // Push empty as voteIndexes uses index 0 to indicate that
         // an account has not yet voted
-        proposal.votes.push(Vote({
-            voter: address(0),
-            weight: 0,
-            inSupport: true
-        }));
+        proposal.votes.length++;
 
         emit ProposalMade(index);
     }
@@ -155,7 +148,7 @@ contract Senate is ASenate {
         Proposal storage proposal = proposals[_proposalIndex];
 
         require(!debatingPeriodEnded(proposal), "The debating period has ended");
-        require(proposal.voteIndexes[msg.sender] != 0, "That address already voted");
+        require(proposal.voteIndexes[msg.sender] == 0, "That address already voted");
 
         uint256 amountLocked;
         uint256 lastIncreasedAt;
@@ -178,7 +171,7 @@ contract Senate is ASenate {
         }));
         proposal.voteIndexes[msg.sender] = voteIndex;
 
-        emit Voted(_proposalIndex, msg.sender, _inSupport, amountLocked);
+        emit Voted(_proposalIndex, voteIndex, msg.sender, _inSupport, amountLocked);
     }
 
     function executeProposal(uint256 _index) external {
@@ -206,12 +199,13 @@ contract Senate is ASenate {
         return tokenVault = ATokenVault(addressBook.index(addressBook.getEntryIdentifier("TokenVault")));
     }
 
-    function debatingPeriodEnded(Proposal storage proposal) internal returns (bool ended) {
+    function debatingPeriodEnded(Proposal storage proposal) internal view returns (bool ended) {
         uint256 debationDeadline = proposal.createdAt + debatingPeriodMs;
+
         return ended = block.timestamp > debationDeadline;
     }
 
-    function proposalPassed(Proposal storage proposal) internal returns (bool passed) {
+    function proposalPassed(Proposal storage proposal) internal view returns (bool passed) {
         //TODO define passed in another way
         return passed = proposal.totalYea > proposal.totalNay;
     }
@@ -220,5 +214,4 @@ contract Senate is ASenate {
         require(msg.sender == president, "Can only be called by president");
         _;
     }
-
 }

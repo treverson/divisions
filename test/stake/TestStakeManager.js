@@ -112,7 +112,7 @@ contract('StakeManager', async accounts => {
 
     let minDepositSizes = [
         web3.toWei(1, 'ether'),
-        web3.toWei(1500, 'ether')
+        web3.toWei(1500, 'ether'),
     ]
     minDepositSizes.forEach(minDepositSize => {
         it('decides how much ether can be staked when MIN_DEPOSIT_SIZE = ' + minDepositSize, async () => {
@@ -130,7 +130,7 @@ contract('StakeManager', async accounts => {
             let stakeAmount = await stakeManager.getStakeableAmount();
             let expectedStakeAmount;
             if (treasuryBalance.plus(weiReserve).gte(minDepositSize))
-                expectedStakeAmount = treasuryBalance.plus(weiReserve);
+                expectedStakeAmount = web3.toBigNumber(minDepositSize);
             else // If not enough available to meet min deposit size, expect 0
                 expectedStakeAmount = web3.toBigNumber(0);
 
