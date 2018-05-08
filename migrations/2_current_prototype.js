@@ -9,6 +9,8 @@ let StakeManager = artifacts.require('StakeManager');
 let DivisionsToken = artifacts.require('DivisionsToken');
 let Exchange = artifacts.require('Exchange');
 
+let GovernanceToken = artifacts.require('GovernanceToken');
+
 const MIN_DEPOSIT_SIZE = web3.toWei(1, 'ether');
 const EPOCH_LENGTH = 20;
 
@@ -17,6 +19,8 @@ const WITHDRAWAL_DELAY = 0;
 
 const MIN_BUY_ORDER_AMOUNT = web3.toWei(0.01, 'ether');
 const MIN_SELL_ORDER_AMOUNT = 0.01e18;
+
+const GOV_TOKEN_INITIAL_SUPPLY = 1000e18;
 
 const validator = web3.eth.accounts[1];
 module.exports = async deployer => {
@@ -51,6 +55,8 @@ module.exports = async deployer => {
             MIN_SELL_ORDER_AMOUNT
         );
 
+        await deployer.deploy(GovernanceToken, GOV_TOKEN_INITIAL_SUPPLY);
+
         let deployedTreasury = Treasury.at(Treasury.address);
         await deployedTreasury.setStakeManager(StakeManager.address);
         await deployedTreasury.setExchange(Exchange.address);
@@ -63,7 +69,8 @@ module.exports = async deployer => {
             treasury: Treasury.address,
             stakeManager: StakeManager.address,
             divisionToken: DivisionsToken.address,
-            exchange: Exchange.address
+            exchange: Exchange.address,
+            governanceToken: GovernanceToken.address
         };
         
         let addressesJson = JSON.stringify(addresses);

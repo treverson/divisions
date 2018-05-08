@@ -21,6 +21,7 @@ module.exports = async (transaction, event, params, message) => {
             assert.deepEqual(temp, params, message);
         }
     } catch (err) {
+    
         assert.fail(err.toString());
     } finally {
         transactionListener.dispose();

@@ -144,9 +144,8 @@ contract Exchange is AExchange {
         minSellOrderAmount = _min;
     }
 
-    function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external {
-        require(_token == address(divToken), "Only accepts approvals from divToken");
-        require(address(divToken) == msg.sender, "Only accepts calls from divToken");
+    function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external payable {
+        require(_token == address(divToken), "Only accepts approvals from DivisionsToken");
 
         Order storage sellOrder = placeSellOrder(_value, _from);
         
