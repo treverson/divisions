@@ -2,7 +2,8 @@ const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 let TransactionListener = require('../../test-helpers/TransactionListener');
 let transactionListener = new TransactionListener();
-const BigNumber = require('bignumber.js');
+
+const BigNumber = web3.toBigNumber(0).__proto__;
 // ============ Test Exchange ============ //
 
 const Exchange = artifacts.require('Exchange');

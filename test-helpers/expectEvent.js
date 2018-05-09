@@ -22,7 +22,7 @@ module.exports = async (transaction, event, params, message) => {
         }
     } catch (err) {
     
-        assert.fail(err.toString());
+        assert.fail(err.message);
     } finally {
         transactionListener.dispose();
         return out;

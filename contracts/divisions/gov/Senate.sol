@@ -9,13 +9,12 @@ contract ASenate {
     struct Proposal {
         uint256 value;
         address target;
-        bytes calldata;
-        string description;
+        bytes32 calldataHash;
+        bytes32 description;
         uint256 createdAt;
 
         bool executed;
-        bool succeeded;
-        
+
         uint256 totalYea;
         uint256 totalNay;
         Vote[] votes;
@@ -31,7 +30,11 @@ contract ASenate {
     AAddressBook addressBook;
     address public president;
 
-    uint256 public debatingPeriodMs;
+    uint256 public debatingPeriod;
+
+    uint256 public constant quorumMultiplier = 10e18;
+    uint256 public quorumFractionMultiplied;
+
     Proposal[] public proposals;
 
     function proposalsLength() external view returns (uint256 length);
@@ -56,22 +59,25 @@ contract ASenate {
     // Used by the president to create a new proposal
     function makeProposal(
         address _target,
-        bytes _calldata,
+        bytes32 _calldataHash,
         uint256 _value,
-        string _description
+        bytes32 _description
     )
         external;
 
     function vote(uint256 _index, bool _inSupport) external; 
 
-    function executeProposal(uint256 _index) external;
+    function executeProposal(uint256 _index, bytes _calldata) external;
 
     // Can be called only by executing a proposal
-    function changeVotingRules(uint256 _debatingPeriodMs) external;
+    function changeVotingRules(uint256 _debatingPeriodMs, uint256 _quorum) external;
 
-    event ProposalMade(uint256 index);
+    function proposalPassed(uint256 _index) external view returns (bool passed);
+    function proposalDebatingPeriodEnded(uint256 _index) external view returns (bool ended);
+
+    event ProposalMade(uint256 indexed index);
     event Voted(uint256 indexed proposalIndex, uint256 voteIndex, address voter, bool inSupport, uint256 weight);
-    event ProposalExecuted(uint256 indexed index, bool success);
+    event ProposalExecuted(uint256 indexed index);
 
     event VotingRulesChanged();
 }
@@ -80,13 +86,15 @@ contract Senate is ASenate {
     constructor(
         AAddressBook _addressBook,
         address _president,
-        uint256 _debatingPeriodMs
+        uint256 _debatingPeriod,
+        uint256 _quorumFractionMultiplied
     )
         public 
     {
         president = _president;
         addressBook = _addressBook;
-        debatingPeriodMs = _debatingPeriodMs;
+        debatingPeriod = _debatingPeriod * 1 seconds;
+        quorumFractionMultiplied = _quorumFractionMultiplied;
     }
 
     function proposalsLength() external view returns (uint256 length) {
@@ -120,9 +128,9 @@ contract Senate is ASenate {
 
     function makeProposal(
         address _target,
-        bytes _calldata,
+        bytes32 _calldataHash,
         uint256 _value,
-        string _description
+        bytes32 _description
     )
         external
         onlyPresident
@@ -132,7 +140,7 @@ contract Senate is ASenate {
         Proposal storage proposal = proposals[index];
 
         proposal.target = _target;
-        proposal.calldata = _calldata;
+        proposal.calldataHash = _calldataHash;
         proposal.value = _value;
         proposal.description = _description;
         proposal.createdAt = block.timestamp;
@@ -147,7 +155,7 @@ contract Senate is ASenate {
     function vote(uint256 _proposalIndex, bool _inSupport) external {
         Proposal storage proposal = proposals[_proposalIndex];
 
-        require(!debatingPeriodEnded(proposal), "The debating period has ended");
+        require(!proposalDebatingPeriodEnded(proposal), "The debating period has ended");
         require(proposal.voteIndexes[msg.sender] == 0, "That address already voted");
 
         uint256 amountLocked;
@@ -174,24 +182,32 @@ contract Senate is ASenate {
         emit Voted(_proposalIndex, voteIndex, msg.sender, _inSupport, amountLocked);
     }
 
-    function executeProposal(uint256 _index) external {
+    function executeProposal(uint256 _index, bytes _calldata) external {
         Proposal storage proposal = proposals[_index];
         
-        require(debatingPeriodEnded(proposal), "The debating period has not ended yet");
+        require(keccak256(_calldata) == proposal.calldataHash);
+        
+        require(proposalDebatingPeriodEnded(proposal), "The debating period has not ended yet");
         require(proposalPassed(proposal), "The proposal has not passed");
         
         require(!proposal.executed, "The proposal was already executed");
         proposal.executed = true;
-        bool success = proposal.target.call.value(proposal.value)(proposal.calldata);
-        proposal.succeeded = success;
+
+        // Revert when call fails, so that we can retry with more gas,
+        // since we don't know whether there was enough
+        require(proposal.target.call.value(proposal.value)(_calldata));
         
-        emit ProposalExecuted(_index, success);
+        emit ProposalExecuted(_index);
     }
     
-    function changeVotingRules(uint256 _debatingPeriodMs) external {
-        require(msg.sender == address(this), "Can only be called by executing a proposal");
+    function changeVotingRules(uint256 _debatingPeriod, uint256 _quorumFractionMultiplied)
+        external
+        onlyByProposalExecution 
+    {
+        debatingPeriod = _debatingPeriod * 1 seconds;
+        quorumFractionMultiplied = _quorumFractionMultiplied;
         
-        debatingPeriodMs = _debatingPeriodMs;
+        emit VotingRulesChanged();
     }
 
 
@@ -199,10 +215,18 @@ contract Senate is ASenate {
         return tokenVault = ATokenVault(addressBook.index(addressBook.getEntryIdentifier("TokenVault")));
     }
 
-    function debatingPeriodEnded(Proposal storage proposal) internal view returns (bool ended) {
-        uint256 debationDeadline = proposal.createdAt + debatingPeriodMs;
+    function proposalDebatingPeriodEnded(uint256 _index) external view returns (bool ended) {
+        return ended = proposalDebatingPeriodEnded(proposals[_index]);
+    }
 
-        return ended = block.timestamp > debationDeadline;
+    function proposalDebatingPeriodEnded(Proposal storage proposal) internal view returns (bool ended) {
+        uint256 debatingDeadline = proposal.createdAt + debatingPeriod;
+
+        return ended = block.timestamp > debatingDeadline;
+    }
+
+    function proposalPassed(uint256 _index) external view returns (bool passed) {
+        return passed = proposalPassed(proposals[_index]);
     }
 
     function proposalPassed(Proposal storage proposal) internal view returns (bool passed) {
@@ -214,4 +238,14 @@ contract Senate is ASenate {
         require(msg.sender == president, "Can only be called by president");
         _;
     }
+
+    modifier onlyByProposalExecution() {
+        require(msg.sender == address(this), "Can only be called by executing a proposal");
+        _;
+    }
+
+    event Out(string n, bytes32 b);
+    event Out(string n, bool b);
+    event Out(string n, bytes b);
+    event Out(string n, address a);
 }
