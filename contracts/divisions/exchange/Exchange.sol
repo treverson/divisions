@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../gov/AddressBookEntry.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/payment/PullPayment.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/math/Math.sol";
 
@@ -9,7 +9,7 @@ import "../stake/StakeManager.sol";
 import "../token/DivisionsToken.sol";
 import "../token/ITokenRecipient.sol";
 
-contract AExchange is Ownable, PullPayment, ITokenRecipient {
+contract AExchange is AddressBookEntry, PullPayment, ITokenRecipient {
     ATreasury public treasury;
     ADivisionsToken public divToken;
     AStakeManager public stakeManager;
@@ -29,8 +29,8 @@ contract AExchange is Ownable, PullPayment, ITokenRecipient {
     // The minumum amount of a sell order in DIV
     uint256 public minSellOrderAmount;
     
-    function setMinBuyOrderAmount(uint256 _min) public onlyOwner();
-    function setMinSellOrderAmount(uint256 _max) public onlyOwner();
+    function setMinBuyOrderAmount(uint256 _min) external onlyOwner();
+    function setMinSellOrderAmount(uint256 _max) external onlyOwner();
 
     Order[] public buyOrders;
     //All buy orders with index < buyOrderCursor are finished
@@ -118,8 +118,12 @@ contract Exchange is AExchange {
         ADivisionsToken _divToken,
         AStakeManager _stakeManager,
         uint256 _minBuyOrderAmount,
-        uint256 _minSellOrderAmount
-    ) public {
+        uint256 _minSellOrderAmount,
+        AAddressBook _addressBook
+    ) 
+    public
+    AddressBookEntry(_addressBook, "Exchange")
+    {
         divToken = _divToken;
         stakeManager = _stakeManager;
         treasury = _stakeManager.treasury();
@@ -130,16 +134,24 @@ contract Exchange is AExchange {
         buyOrderCursor = 0;
         sellOrderCursor = 0;
 
-        setMinBuyOrderAmount(_minBuyOrderAmount);
-        setMinSellOrderAmount(_minSellOrderAmount);
+        // setMinBuyOrderAmountTo(_minBuyOrderAmount);
+        // setMinSellOrderAmountTo(_minSellOrderAmount);
     }
     
-    function setMinBuyOrderAmount(uint256 _min) public onlyOwner {
+    function setMinBuyOrderAmount(uint256 _min) external onlyOwner {
+        setMinBuyOrderAmountTo(_min);
+    }
+
+    function setMinBuyOrderAmountTo(uint256 _min) internal {
         require(_min > 0, "The minimum must be greater than 0");
         minBuyOrderAmount = _min;
     }
 
-    function setMinSellOrderAmount(uint256 _min) public onlyOwner {
+    function setMinSellOrderAmount(uint256 _min) external onlyOwner {
+        setMinSellOrderAmountTo(_min);
+    }
+
+    function setMinSellOrderAmountTo(uint256 _min) internal {
         require(_min > 0, "The minimum must be greater than 0");
         minSellOrderAmount = _min;
     }

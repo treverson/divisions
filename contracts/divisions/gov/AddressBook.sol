@@ -9,10 +9,12 @@ contract AAddressBook is Ownable {
 
     function setEntryOwner(AAddressBookEntry _addr, address _owner) external onlyOwner;
 
-    function setEntry(bytes32 _identifier, AAddressBookEntry _addr) external onlyOwner;
+    function setEntry(bytes32 _identifier, AAddressBookEntry _entry) external onlyOwner;
 
     function registerEntry(AAddressBookEntry _entry) external onlyOwner;
- 
+    
+    function registerEntry(AAddressBookEntry _entry, address _owner) external onlyOwner;
+
     function getEntryIdentifier(string _name) public pure returns (bytes32 identifier);
 
     event EntryOwnerSet(AAddressBookEntry indexed entry, address owner);
@@ -33,14 +35,24 @@ contract AddressBook is AAddressBook {
         emit EntryOwnerSet(_addr, _owner);
     }
 
-    function setEntry(bytes32 _identifier, AAddressBookEntry _addr) external onlyOwner {
-        require(_addr != address(0), "addr cannot be 0");
-        index[_identifier] = _addr;
-        emit EntrySet(_identifier, _addr);
+    function setEntry(bytes32 _identifier, AAddressBookEntry _entry) external onlyOwner {
+        require(_entry != address(0), "addr cannot be 0");
+        index[_identifier] = _entry;
+        emit EntrySet(_identifier, _entry);
     }
 
     function registerEntry(AAddressBookEntry _entry) external onlyOwner {
-        index[getEntryIdentifier(_entry.name())] = _entry;
+        bytes32 identifier = _entry.identifier();
+        index[identifier] = _entry;
+        emit EntrySet(identifier, _entry);
+    }
+
+    function registerEntry(AAddressBookEntry _entry, address _owner) external onlyOwner {
+        bytes32 identifier = _entry.identifier();
+        index[identifier] = _entry;
+        ownership[address(_entry)] = _owner;
+        emit EntrySet(identifier, _entry);
+        emit EntryOwnerSet(_entry, _owner);
     }
 
     function getEntryIdentifier(string _name) public pure returns (bytes32 identifier) {

@@ -2,11 +2,12 @@ pragma solidity 0.4.23;
 
 
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
-import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+
+import "../gov/AddressBookEntry.sol";
 
 import "./CallingToken.sol";
 
-contract ADivisionsToken is CallingToken, Ownable {
+contract ADivisionsToken is CallingToken, AddressBookEntry {
     address public minter;
 
     string public symbol;
@@ -26,7 +27,10 @@ contract ADivisionsToken is CallingToken, Ownable {
 contract DivisionsToken is ADivisionsToken {
     using SafeMath for uint256;
 
-    constructor() public {
+    constructor(AAddressBook _addressBook)
+    AddressBookEntry(_addressBook, "DivisionsToken")
+    public 
+    {
         symbol = "DIV";
         name = "Divisions";
         decimals = 18;

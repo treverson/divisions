@@ -10,6 +10,7 @@ const MockCasper = artifacts.require('MockCasper');
 const MockWithdrawalBox = artifacts.require('MockWithdrawalBox');
 const MockStakeManager = artifacts.require('MockStakeManager');
 const MockExchange = artifacts.require('MockExchange');
+const MockAddressBook = artifacts.require('MockAddressBook');
 
 const minDepositSize = web3.toWei(1, 'ether');
 const epochLength = 20;
@@ -21,12 +22,19 @@ contract('Treasury', async accounts => {
     let casper;
     let stakeManager;
     let exchange;
+    let addressBook;
+
     before(async () => {
+        addressBook = await MockAddressBook.new();
+
         stakeManager = accounts[1];
 
         casper = await MockCasper.new(minDepositSize, epochLength, dynastyLogoutDelay, withdrawalDelay);
-        treasury = await Treasury.new(casper.address);
-        exchange = await MockExchange.new(treasury.address);
+        treasury = await Treasury.new(casper.address, addressBook.address);
+        await addressBook.registerEntry(treasury.address, accounts[0]);
+
+        exchange = await MockExchange.new(treasury.address, addressBook.address);
+        await addressBook.registerEntry(exchange.address, accounts[0]);
     });
 
     beforeEach(async () => {
@@ -250,7 +258,7 @@ contract('Treasury', async accounts => {
     });
 
     it('gets the total pool size in ether', async () => {
-        let stakeManager = await MockStakeManager.new(casper.address, treasury.address);
+        let stakeManager = await MockStakeManager.new(casper.address, treasury.address, addressBook.address);
         await treasury.setStakeManager(stakeManager.address);
 
         for (let i = 0; i < 40; i++) {

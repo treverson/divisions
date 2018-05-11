@@ -6,7 +6,10 @@ import "./MockWithdrawalBox.sol";
 
 contract MockStakeManager is AStakeManager {
     
-    constructor(ACasper _casper, ATreasury _treasury) public {
+    constructor(ACasper _casper, ATreasury _treasury, AAddressBook _addressBook) 
+    public
+    AddressBookEntry(_addressBook, "StakeManager")
+    {
         casper = _casper;
         treasury = _treasury;
     }

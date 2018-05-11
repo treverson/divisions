@@ -31,7 +31,8 @@ contract('Senate', async accounts => {
             addressBook.address,
             president,
             DEBATING_PERIOD_SECS,
-            QOURUM_FRACTION * QUORUM_MULTIPLIER
+            QOURUM_FRACTION * QUORUM_MULTIPLIE,
+            addressBook.address
         );
 
         tokenVault = await MockTokenVault.new(addressBook.address);

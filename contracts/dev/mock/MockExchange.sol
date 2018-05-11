@@ -6,15 +6,17 @@ contract MockExchange is AExchange {
     uint256 weiReserve_ = 0;
     uint256 divReserve_ = 0;
 
-    function MockExchange(ATreasury _treasury) public {
+    constructor(ATreasury _treasury, AAddressBook _addressBook)
+    AddressBookEntry(_addressBook, "Exchange")
+    public {
         treasury = _treasury;
     }
 
-    function setMinBuyOrderAmount(uint256 _min) public onlyOwner(){
+    function setMinBuyOrderAmount(uint256 _min) external onlyOwner(){
 
     }
 
-    function setMinSellOrderAmount(uint256 _max) public onlyOwner(){
+    function setMinSellOrderAmount(uint256 _max) external onlyOwner(){
 
     }
 

@@ -47,17 +47,19 @@ module.exports = async deployer => {
             WITHDRAWAL_DELAY
         );
 
-        await deployer.deploy(Treasury, MockCasper.address);
+        await deployer.deploy(Treasury, MockCasper.address, AddressBook.address);
 
         await deployer.deploy(
             StakeManager,
             MockCasper.address,
             validator,
-            Treasury.address
+            Treasury.address,
+            AddressBook.address
         );
 
         await deployer.deploy(
-            DivisionsToken
+            DivisionsToken,
+            AddressBook.address
         );
 
         await deployer.deploy(
@@ -65,7 +67,8 @@ module.exports = async deployer => {
             DivisionsToken.address,
             StakeManager.address,
             MIN_BUY_ORDER_AMOUNT,
-            MIN_SELL_ORDER_AMOUNT
+            MIN_SELL_ORDER_AMOUNT,
+            AddressBook.address
         );
 
         await deployer.deploy(GovernanceToken, GOV_TOKEN_INITIAL_SUPPLY);
@@ -80,7 +83,12 @@ module.exports = async deployer => {
         await deployer.deploy(TokenVault, AddressBook.address, GOVERNANCE_TOKEN_NAME);
 
         let deployedAddressBook = AddressBook.at(AddressBook.address);
-        await deployedAddressBook.registerEntry(TokenVault.address);
+        await deployedAddressBook.registerEntry(TokenVault.address, Senate.address);
+        await deployedAddressBook.registerEntry(StakeManager.address, Senate.address);
+        await deployedAddressBook.registerEntry(Exchange.address, Senate.address);
+        await deployedAddressBook.registerEntry(DivisionsToken.address, Senate.address);
+        await deployedAddressBook.registerEntry(Treasury.address, Senate.address);
+        
         await deployedAddressBook.setEntry(
             await deployedAddressBook.getEntryIdentifier("GovernanceToken"),
             GovernanceToken.address

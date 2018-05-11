@@ -1,13 +1,17 @@
 pragma solidity 0.4.23;
 
-import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
+
+import "../gov/AddressBook.sol";
+import "../exchange/Exchange.sol";
 
 import "./ACasper.sol";
 import "./StakeManager.sol";
 import "./WithdrawalBox.sol";
 
-contract ATreasury is Ownable {
+
+contract ATreasury is AddressBookEntry {
     AStakeManager public stakeManager;
     AExchange public exchange;
     ACasper public casper;
@@ -47,7 +51,10 @@ contract Treasury is ATreasury {
 
     TotalPoolSizeCache private poolSizeCache;
 
-    constructor(ACasper _casper) public {
+    constructor(ACasper _casper, AAddressBook _addressBook)
+    AddressBookEntry(_addressBook, "Treasury")
+    public
+    {
         casper = _casper;
     }
 

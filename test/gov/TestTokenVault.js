@@ -18,7 +18,7 @@ contract('TokenVault', async accounts => {
 
         addressBook = await AddressBook.new(accounts[0]);
 
-        tokenVault = await TokenVault.new(addressBook.address, "GovernanceToken");
+        tokenVault = await TokenVault.new(addressBook.address, "GovernanceToken", addressBook.address);
 
         govToken = await GovernanceToken.new(GOV_TOKEN_INITIAL_SUPPLY);
         await addressBook.registerEntry(tokenVault.address);

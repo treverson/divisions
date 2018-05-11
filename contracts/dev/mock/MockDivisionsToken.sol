@@ -4,7 +4,10 @@ import "../../divisions/token/DivisionsToken.sol";
 
 contract MockDivisionsToken is ADivisionsToken {
 
-    constructor() public {
+    constructor(AAddressBook _addressBook)
+    AddressBookEntry(_addressBook, "DivisionsToken")
+    public
+    {
         symbol = "MOCK";
         name = "MockDivisions";
         decimals = 18;

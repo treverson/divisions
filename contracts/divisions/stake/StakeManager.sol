@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../gov/AddressBookEntry.sol";
 import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "./Treasury.sol";
@@ -8,7 +8,7 @@ import "./WithdrawalBox.sol";
 import "./ACasper.sol";
 import "../exchange/Exchange.sol";
 
-contract AStakeManager is Ownable {
+contract AStakeManager is AddressBookEntry {
     
     struct VoteMessage {
         bytes messageRLP;
@@ -79,8 +79,10 @@ contract StakeManager is AStakeManager {
     constructor(
         ACasper _casper,
         address _validator,
-        ATreasury _treasury
+        ATreasury _treasury,
+        AAddressBook _addressBook
     ) 
+        AddressBookEntry(_addressBook, "StakeManager")
         public 
     {
         casper = _casper;

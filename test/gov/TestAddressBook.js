@@ -18,21 +18,21 @@ contract('AddressBook', async accounts => {
         let address = accounts[2];
         let addressOwner = accounts[3];
         await expectThrow(
-            addressBook.setAddressOwner(0, addressOwner, { from: owner }),
+            addressBook.setEntryOwner(0, addressOwner, { from: owner }),
             "The address cannot be 0"
         );
 
         await expectThrow(
-            addressBook.setAddressOwner(address, 0, { from: owner }),
+            addressBook.setEntryOwner(address, 0, { from: owner }),
             "The owner cannot be 0"
         );
 
         await expectThrow(
-            addressBook.setAddressOwner(address, addressOwner),
+            addressBook.setEntryOwner(address, addressOwner),
             "Only the owner of AddressBook can set the owner of an address"
         );
 
-        await addressBook.setAddressOwner(address, addressOwner, { from: owner });
+        await addressBook.setEntryOwner(address, addressOwner, { from: owner });
 
         assert.equal(
             await addressBook.ownership(address),
@@ -41,12 +41,12 @@ contract('AddressBook', async accounts => {
         );
     });
 
-    it('logs an event on setAddressOwner', async () => {
+    it('logs an event on setEntryOwner', async () => {
         let address = accounts[2];
         let addressOwner = accounts[3];
         await expectEvent(
-            addressBook.setAddressOwner.sendTransaction(address, addressOwner, { from: owner }),
-            addressBook.AddressOwnerSet(),
+            addressBook.setEntryOwner.sendTransaction(address, addressOwner, { from: owner }),
+            addressBook.EntryOwnerSet(),
             { addr: address, owner: addressOwner }
         );
     });
@@ -56,16 +56,16 @@ contract('AddressBook', async accounts => {
         let address = accounts[2];
 
         await expectThrow(
-            addressBook.setAddress(identifier, 0, { from: owner }),
+            addressBook.setEntry(identifier, 0, { from: owner }),
             "Address cannot be 0"
         );
 
         await expectThrow(
-            addressBook.setAddress(identifier, address),
+            addressBook.setEntry(identifier, address),
             "Only the owner of AddressBook can set the owner of an address"
         );
 
-        await addressBook.setAddress(identifier, address, { from: owner });
+        await addressBook.setEntry(identifier, address, { from: owner });
 
         assert.equal(
             await addressBook.index(identifier),
@@ -74,14 +74,18 @@ contract('AddressBook', async accounts => {
         );
     });
 
-    it('logs an event on setAddress', async () => {
+    it('logs an event on setEntry', async () => {
         let identifier = "identifier";
         let address = accounts[2];
 
         await expectEvent(
-            addressBook.setAddress.sendTransaction(identifier, address, {from: owner}),
-            addressBook.AddressSet(),
+            addressBook.setEntry.sendTransaction(identifier, address, {from: owner}),
+            addressBook.EntrySet(),
             {identifier:  identifier, address: address}
         );
+    });
+
+    it('registers entries', async () => {
+        assert.fail('TODO');
     });
 });

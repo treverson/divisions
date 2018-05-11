@@ -5,7 +5,10 @@ import "../../divisions/stake/Treasury.sol";
 contract MockTreasury is ATreasury {
     uint256 private totalPoolSize_;
 
-    constructor(ACasper _casper) public {
+    constructor(ACasper _casper, AAddressBook _addressBook)
+    AddressBookEntry(_addressBook, "Treasury")
+    public
+    {
         casper = _casper;
     }
 

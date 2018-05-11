@@ -2,9 +2,10 @@ const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 let TransactionListener = require('../../test-helpers/TransactionListener');
 let transactionListener = new TransactionListener();
-
-const BigNumber = web3.toBigNumber(0).__proto__;
+let BigNumber = web3.__proto__.BigNumber;
 // ============ Test Exchange ============ //
+
+const MockAddressBook = artifacts.require('MockAddressBook');
 
 const Exchange = artifacts.require('Exchange');
 const MockDivisionsToken = artifacts.require('MockDivisionsToken');
@@ -26,24 +27,35 @@ contract('Exchange', async accounts => {
     let casper;
     let treasury;
     let validator;
+    let addressBook;
 
     before(async () => {
+        addressBook = await MockAddressBook.new();
+
         validator = accounts[1];
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
-        treasury = await MockTreasury.new(casper.address);
-        stakeManager = await MockStakeManager.new(casper.address, treasury.address);
+        treasury = await MockTreasury.new(casper.address, addressBook.address);
+        await addressBook.registerEntry(treasury.address, accounts[0]);
+
+        stakeManager = await MockStakeManager.new(casper.address, treasury.address, addressBook.address);
 
         await treasury.setStakeManager(stakeManager.address);
     });
 
     beforeEach(async () => {
-        divToken = await MockDivisionsToken.new();
+        divToken = await MockDivisionsToken.new(addressBook.address);
+        await addressBook.registerEntry(divToken.address, accounts[0]);
+
         exchange = await Exchange.new(
             divToken.address,
             stakeManager.address, 
             web3.toWei(0.01, "ether"),
-            0.01e18
+            0.01e18,
+            addressBook.address
         );
+
+        await addressBook.registerEntry(exchange.address, accounts[0]);
+        
         await stakeManager.setExchange(exchange.address);
         await divToken.transferMintership(exchange.address);
         await treasury.setTotalPoolSize(0);
@@ -293,7 +305,6 @@ contract('Exchange', async accounts => {
             { index: sellOrdersLength, sender: seller, amount: sellAmount }
         );
     });
-
 
     let buyOrderAmounts = [
         web3.toWei(3, 'ether'),
