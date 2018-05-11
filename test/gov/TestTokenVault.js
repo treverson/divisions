@@ -142,6 +142,10 @@ contract('TokenVault', async accounts => {
             }
         );
     });
+
+    it('keeps track of the total amount of locked tokens', async () => {
+        assert.fail('TODO');
+    });
 });
 
 class Locker {

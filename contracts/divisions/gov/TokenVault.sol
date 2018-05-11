@@ -9,6 +9,8 @@ import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract ATokenVault is AddressBookEntry, ITokenRecipient {
 
+    uint256 public totalLocked;
+
     struct Locker {
         // The amount of DIVG that is locked
         uint256 amount;
@@ -42,6 +44,7 @@ contract TokenVault is ATokenVault {
     }
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external payable {
+        bytes(_extraData); // Suppress warning on unused variable
         require(_token == address(getToken()), "Only accepts approvals from GovernanceToken");
         lockTokens(_value, _from);
     }
@@ -53,6 +56,8 @@ contract TokenVault is ATokenVault {
         locker.amount = locker.amount.add(_amount);
         locker.lastIncreasedAt = block.timestamp;
 
+        totalLocked = totalLocked.add(_amount);
+
         emit TokensLocked(_owner, _amount);
     }
 
@@ -62,6 +67,8 @@ contract TokenVault is ATokenVault {
         // SafeMath.sub() checks for underflow and
         // reverts if locker.amount - _amount < 0
         locker.amount = locker.amount.sub(_amount);
+
+        totalLocked = totalLocked.sub(_amount);
 
         getToken().transfer(msg.sender, _amount);
          

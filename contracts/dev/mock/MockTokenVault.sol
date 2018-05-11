@@ -15,7 +15,7 @@ contract MockTokenVault is ATokenVault, MockTokenRecipient {
 
         locker.amount += _amount;
         locker.lastIncreasedAt = block.timestamp;
-        
+        totalLocked += _amount;
         emit TokensLocked(msg.sender, _amount);
     }
 
@@ -23,7 +23,7 @@ contract MockTokenVault is ATokenVault, MockTokenRecipient {
         require(lockers[msg.sender].amount >= _amount);
 
         lockers[msg.sender].amount -= _amount;
-
+        totalLocked -= _amount;
         emit TokensUnlocked(msg.sender, _amount);
     }
 

@@ -15,10 +15,11 @@ contract ASenate {
 
         bool executed;
 
-        uint256 totalYea;
-        uint256 totalNay;
-        Vote[] votes;
-        mapping(address => uint256) voteIndexes;
+        uint256 totalYea; // The total amount of yea vote
+        uint256 totalNay; // The total amount of nay vote
+        uint256 totalLockedTokens; // The total amount of tokens that was locked at the time of creation
+        Vote[] votes; //Every made vote
+        mapping(address => uint256) voteIndexes; // The vote indexes for each voter's address
     }
 
     struct Vote {
@@ -71,6 +72,7 @@ contract ASenate {
 
     // Can be called only by executing a proposal
     function changeVotingRules(uint256 _debatingPeriodMs, uint256 _quorum) external;
+    function setPresident(address _newPresident) external;
 
     function proposalPassed(uint256 _index) external view returns (bool passed);
     function proposalDebatingPeriodEnded(uint256 _index) external view returns (bool ended);
@@ -80,6 +82,7 @@ contract ASenate {
     event ProposalExecuted(uint256 indexed index);
 
     event VotingRulesChanged();
+    event PresidentSet(address previousPresident, address newPresident);
 }
 
 contract Senate is ASenate {
@@ -93,6 +96,7 @@ contract Senate is ASenate {
     {
         president = _president;
         addressBook = _addressBook;
+
         debatingPeriod = _debatingPeriod * 1 seconds;
         quorumFractionMultiplied = _quorumFractionMultiplied;
     }
@@ -145,6 +149,8 @@ contract Senate is ASenate {
         proposal.description = _description;
         proposal.createdAt = block.timestamp;
 
+        proposal.totalLockedTokens = getTokenVault().totalLocked();
+        proposal.totalLockedTokens = 100;
         // Push empty as voteIndexes uses index 0 to indicate that
         // an account has not yet voted
         proposal.votes.length++;
@@ -210,6 +216,14 @@ contract Senate is ASenate {
         emit VotingRulesChanged();
     }
 
+    function setPresident(address _newPresident)
+        external
+        onlyPresidentOrByProposalExecution
+    {
+        emit PresidentSet(president, _newPresident);
+        president = _newPresident;
+    }
+
 
     function getTokenVault() internal view returns (ATokenVault tokenVault) {
         return tokenVault = ATokenVault(addressBook.index(addressBook.getEntryIdentifier("TokenVault")));
@@ -230,22 +244,37 @@ contract Senate is ASenate {
     }
 
     function proposalPassed(Proposal storage proposal) internal view returns (bool passed) {
-        //TODO define passed in another way
-        return passed = proposal.totalYea > proposal.totalNay;
+        uint256 totalYea = proposal.totalYea;
+        uint256 totalNay = proposal.totalNay;
+        uint256 totalVotes = totalYea + totalNay;
+        
+        uint256 voteQuorum = (proposal.totalLockedTokens * quorumFractionMultiplied) / quorumMultiplier;
+        passed = totalVotes > voteQuorum;
+
+        return passed = passed && proposal.totalYea > proposal.totalNay;
     }
 
     modifier onlyPresident() {
-        require(msg.sender == president, "Can only be called by president");
+        require(
+            msg.sender == president,
+            "Can only be called by president"
+        );
         _;
     }
 
     modifier onlyByProposalExecution() {
-        require(msg.sender == address(this), "Can only be called by executing a proposal");
+        require(
+            msg.sender == address(this),
+            "Can only be called by executing a proposal"
+        );
         _;
     }
 
-    event Out(string n, bytes32 b);
-    event Out(string n, bool b);
-    event Out(string n, bytes b);
-    event Out(string n, address a);
+    modifier onlyPresidentOrByProposalExecution() {
+        require(
+            msg.sender == president || msg.sender == address(this),
+            "Can only be called by president or by executing a proposal"
+        );
+        _;
+    }
 }
