@@ -169,7 +169,9 @@ contract('TokenVault', async accounts => {
             totalLockedAfter,
             totalLockedBefore.sub(lockAmount),
             "The total locked amount was not decreased correctly"
-        )
+        );
+
+        assert.fail("TODO: keep track of the total amount of locked tokens in the previous block");
     });
 });
 

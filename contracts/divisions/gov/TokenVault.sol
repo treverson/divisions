@@ -50,6 +50,7 @@ contract TokenVault is ATokenVault {
     }
 
     function lockTokens(uint256 _amount, address _owner) internal {
+
         getToken().transferFrom(_owner, address(this), _amount);
         
         Locker storage locker = lockers[_owner];

@@ -7,18 +7,18 @@ import "./TokenVault.sol";
 
 contract ASenate {
     struct Proposal {
-        uint256 value;
-        address target;
-        bytes32 calldataHash;
-        bytes32 description;
-        uint256 createdAt;
+        uint256 value; // Amount of wei that is to be sent
+        address target; // Target address
+        bytes32 calldataHash; // Hash of the calldata for this proposal
+        bytes32 description; 
+        uint256 createdAt; // Creation time
 
-        bool executed;
+        bool executed; // Whether the proposal was executed
 
         uint256 totalYea; // The total amount of yea vote
         uint256 totalNay; // The total amount of nay vote
         uint256 totalLockedTokens; // The total amount of tokens that was locked at the time of creation
-        Vote[] votes; //Every made vote
+        Vote[] votes; //Every vote cast on this proposal
         mapping(address => uint256) voteIndexes; // The vote indexes for each voter's address
     }
 
