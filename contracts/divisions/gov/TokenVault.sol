@@ -63,7 +63,7 @@ contract TokenVault is ATokenVault {
 
     function unlockTokens(uint256 _amount) external {
         Locker storage locker = lockers[msg.sender];
-
+        
         // SafeMath.sub() checks for underflow and
         // reverts if locker.amount - _amount < 0
         locker.amount = locker.amount.sub(_amount);

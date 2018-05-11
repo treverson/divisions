@@ -18,10 +18,10 @@ contract('TokenVault', async accounts => {
 
         addressBook = await AddressBook.new(accounts[0]);
 
-        tokenVault = await TokenVault.new(addressBook.address);
+        tokenVault = await TokenVault.new(addressBook.address, "GovernanceToken");
 
         govToken = await GovernanceToken.new(GOV_TOKEN_INITIAL_SUPPLY);
-        await addressBook.setEntry(await tokenVault.identifier(), tokenVault.address);
+        await addressBook.registerEntry(tokenVault.address);
         await addressBook.setEntry(await addressBook.getEntryIdentifier("GovernanceToken"), govToken.address);
     });
 
@@ -132,9 +132,9 @@ contract('TokenVault', async accounts => {
         let lockAmount = web3.toBigNumber(10e18);
         await govToken.approve(tokenVault.address, lockAmount);
         await tokenVault.lockTokens(lockAmount);
-        
+
         await expectEvent(
-            tokenVault.unlockTokens(lockAmount),
+            tokenVault.unlockTokens.sendTransaction(lockAmount),
             tokenVault.TokensUnlocked(),
             {
                 owner: accounts[0],
@@ -144,7 +144,32 @@ contract('TokenVault', async accounts => {
     });
 
     it('keeps track of the total amount of locked tokens', async () => {
-        assert.fail('TODO');
+        let lockAmount = web3.toBigNumber(100e18);
+
+        let totalLockedBefore = await tokenVault.totalLocked();
+        
+        await govToken.approve(tokenVault.address, lockAmount); 
+        await tokenVault.lockTokens(lockAmount);
+
+        let totalLockedAfter = await tokenVault.totalLocked();
+
+        assert.deepEqual(
+            totalLockedAfter,
+            totalLockedBefore.add(lockAmount),
+            "The total locked amount was not increased correctly"
+        );
+
+        totalLockedBefore = totalLockedAfter;
+
+        await tokenVault.unlockTokens(lockAmount);
+
+        totalLockedAfter = await tokenVault.totalLocked();
+
+        assert.deepEqual(
+            totalLockedAfter,
+            totalLockedBefore.sub(lockAmount),
+            "The total locked amount was not decreased correctly"
+        )
     });
 });
 
