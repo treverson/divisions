@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/token/GovernanceToken.sol";
+import "../../../divisions/token/GovernanceToken.sol";
 
 contract MockGovernanceToken is AGovernanceToken {
     

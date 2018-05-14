@@ -87,10 +87,10 @@ contract ASenate {
 
 contract Senate is ASenate {
     constructor(
-        AAddressBook _addressBook,
         address _president,
         uint256 _debatingPeriod,
-        uint256 _quorumFractionMultiplied
+        uint256 _quorumFractionMultiplied,
+        AAddressBook _addressBook
     )
         public 
     {
@@ -149,8 +149,8 @@ contract Senate is ASenate {
         proposal.description = _description;
         proposal.createdAt = block.timestamp;
 
-        proposal.totalLockedTokens = getTokenVault().totalLocked();
-        proposal.totalLockedTokens = 100;
+        proposal.totalLockedTokens = getTokenVault().totalLockedLastBlock();
+        
         // Push empty as voteIndexes uses index 0 to indicate that
         // an account has not yet voted
         proposal.votes.length++;

@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/stake/Treasury.sol";
+import "../../../divisions/stake/Treasury.sol";
 
 contract MockTreasury is ATreasury {
     uint256 private totalPoolSize_;

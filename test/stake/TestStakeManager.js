@@ -31,10 +31,10 @@ contract('StakeManager', async accounts => {
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
 
         treasury = await MockTreasury.new(casper.address, addressBook.address);
-        await addressBook.registerEntry(treasury.address, accounts[0]);
+        await addressBook.registerEntryOwner(treasury.address, accounts[0]);
 
         exchange = await MockExchange.new(treasury.address, addressBook.address);
-        await addressBook.registerEntry(exchange.address, accounts[0]);
+        await addressBook.registerEntryOwner(exchange.address, accounts[0]);
         
         await treasury.setExchange(exchange.address);
 
@@ -44,7 +44,7 @@ contract('StakeManager', async accounts => {
             treasury.address,
             addressBook.address
         );
-        await addressBook.registerEntry(stakeManager.address, accounts[0]);
+        await addressBook.registerEntryOwner(stakeManager.address, accounts[0]);
 
         await treasury.setStakeManager(stakeManager.address);
     });
@@ -266,7 +266,7 @@ contract('StakeManager', async accounts => {
         let validatorIndex = await casper.validator_indexes(withdrawalBoxAddress);
 
         let messageRLP = web3.toHex("iwannavote");
-        let targetHash = web3.toHex("targetHash") + "00000000000000000000000000000000000000000000";
+        let targetHash = web3.toHex("targetHash").padEnd(66, '0');
         let targetEpoch = web3.toBigNumber(100);
         let sourceEpoch = web3.toBigNumber(101);
 

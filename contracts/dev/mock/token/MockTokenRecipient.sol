@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/token/ITokenRecipient.sol";
+import "../../../divisions/token/ITokenRecipient.sol";
 
 contract MockTokenRecipient is ITokenRecipient {
 

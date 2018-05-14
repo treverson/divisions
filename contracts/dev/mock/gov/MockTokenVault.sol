@@ -1,16 +1,21 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/gov/TokenVault.sol";
-import "./MockTokenRecipient.sol";
+import "../../../divisions/gov/TokenVault.sol";
+import "../token/MockTokenRecipient.sol";
 
 contract MockTokenVault is ATokenVault, MockTokenRecipient {
-    
+    uint256 totalLockedLastUpdatedAt;
+
     constructor(AAddressBook _addressBook)
         AddressBookEntry(_addressBook, "TokenVault")
         public
     {}
 
     function lockTokens(uint256 _amount) external {
+        if(totalLockedLastUpdatedAt < block.timestamp){
+            totalLockedLastBlock = totalLocked;
+            totalLockedLastUpdatedAt = block.timestamp;
+        }
         Locker storage locker = lockers[msg.sender];
 
         locker.amount += _amount;
@@ -20,6 +25,10 @@ contract MockTokenVault is ATokenVault, MockTokenRecipient {
     }
 
     function unlockTokens(uint256 _amount) external {
+        if(totalLockedLastUpdatedAt < block.timestamp){
+            totalLockedLastBlock = totalLocked;
+            totalLockedLastUpdatedAt = block.timestamp;
+        }
         require(lockers[msg.sender].amount >= _amount);
 
         lockers[msg.sender].amount -= _amount;

@@ -6,6 +6,8 @@ const expectEvent = require("../../test-helpers/expectEvent");
 
 const AddressBook = artifacts.require('AddressBook');
 
+const MockAddressBookEntry = artifacts.require('MockAddressBookEntry');
+
 contract('AddressBook', async accounts => {
 
     let addressBook;
@@ -47,7 +49,7 @@ contract('AddressBook', async accounts => {
         await expectEvent(
             addressBook.setEntryOwner.sendTransaction(address, addressOwner, { from: owner }),
             addressBook.EntryOwnerSet(),
-            { addr: address, owner: addressOwner }
+            { entry: address, owner: addressOwner }
         );
     });
 
@@ -75,17 +77,110 @@ contract('AddressBook', async accounts => {
     });
 
     it('logs an event on setEntry', async () => {
-        let identifier = "identifier";
+        let identifier = web3.toHex("identifier").padEnd(66, '0');
         let address = accounts[2];
 
         await expectEvent(
-            addressBook.setEntry.sendTransaction(identifier, address, {from: owner}),
+            addressBook.setEntry.sendTransaction(identifier, address, { from: owner }),
             addressBook.EntrySet(),
-            {identifier:  identifier, address: address}
+            { identifier: identifier, entry: address }
         );
     });
 
     it('registers entries', async () => {
-        assert.fail('TODO');
+        let expectedEntry = await MockAddressBookEntry.new(addressBook.address);
+        let identifier = await expectedEntry.identifier();
+
+        await expectThrow(
+            addressBook.registerEntry(expectedEntry.address),
+            "Only the owner can register entries"
+        );
+
+        await addressBook.registerEntry(expectedEntry.address, { from: owner });
+
+        let actualEntryAddress = await addressBook.index(identifier);
+
+        assert.equal(
+            actualEntryAddress,
+            expectedEntry.address,
+            "The entry was not stored"
+        );
+    });
+
+    it('logs an event on registerEntry', async () => {
+        let entry = await MockAddressBookEntry.new(addressBook.address);
+        
+        await expectEvent(
+            addressBook.registerEntry.sendTransaction(entry.address, { from: owner }),
+            addressBook.EntrySet(),
+            {
+                identifier: await entry.identifier(),
+                entry: entry.address
+            }
+        );
+    });
+
+    it('registers entries with their owners', async () => {
+        let expectedEntry = await MockAddressBookEntry.new(addressBook.address);
+        let identifier = await expectedEntry.identifier();
+        let expectedEntryOwner = accounts[5];
+
+        await expectThrow(
+            addressBook.registerEntryOwner(
+                expectedEntry.address,
+                expectedEntryOwner
+            ),
+            "Only the owner can register entries with their owners"
+        );
+
+        await addressBook.registerEntryOwner(
+            expectedEntry.address,
+            expectedEntryOwner,
+            { from: owner }
+        );
+
+        let actualEntryAddress = await addressBook.index(identifier);
+        let actualEntryOwner = await addressBook.ownership(expectedEntry.address);
+
+        assert.equal(
+            actualEntryAddress,
+            expectedEntry.address,
+            "The entry's address was not stored"
+        );
+
+        assert.equal(
+            actualEntryOwner,
+            expectedEntryOwner,
+            "The entry's owner was not stored"
+        );
+    });
+
+    it('logs an event on registerEntryOwner', async () => {
+        let entry = await MockAddressBookEntry.new(addressBook.address);
+        let entryOwner = accounts[4];
+        await expectEvent(
+            addressBook.registerEntryOwner.sendTransaction(
+                entry.address,
+                entryOwner,
+                { from: owner }
+            ),
+            addressBook.EntrySet(),
+            {
+                identifier: await entry.identifier(),
+                entry: entry.address
+            }
+        );
+        await expectEvent(
+            addressBook.registerEntryOwner.sendTransaction(
+                entry.address,
+                entryOwner,
+                { from: owner }
+            ),
+            addressBook.EntryOwnerSet(),
+            {
+                entry: entry.address,
+                owner: entryOwner
+            }
+        );
     });
 });

@@ -18,7 +18,7 @@ contract('TokenVault', async accounts => {
 
         addressBook = await AddressBook.new(accounts[0]);
 
-        tokenVault = await TokenVault.new(addressBook.address, "GovernanceToken", addressBook.address);
+        tokenVault = await TokenVault.new(addressBook.address, "GovernanceToken");
 
         govToken = await GovernanceToken.new(GOV_TOKEN_INITIAL_SUPPLY);
         await addressBook.registerEntry(tokenVault.address);
@@ -170,8 +170,6 @@ contract('TokenVault', async accounts => {
             totalLockedBefore.sub(lockAmount),
             "The total locked amount was not decreased correctly"
         );
-
-        assert.fail("TODO: keep track of the total amount of locked tokens in the previous block");
     });
 });
 

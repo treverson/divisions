@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/exchange/Exchange.sol";
+import "../../../divisions/exchange/Exchange.sol";
 
 contract MockExchange is AExchange {
     uint256 weiReserve_ = 0;

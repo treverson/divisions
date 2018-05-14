@@ -28,10 +28,9 @@ contract('Senate', async accounts => {
 
     beforeEach(async () => {
         senate = await Senate.new(
-            addressBook.address,
             president,
             DEBATING_PERIOD_SECS,
-            QOURUM_FRACTION * QUORUM_MULTIPLIE,
+            QOURUM_FRACTION * QUORUM_MULTIPLIER,
             addressBook.address
         );
 
@@ -40,6 +39,7 @@ contract('Senate', async accounts => {
         await addressBook.registerEntry(
             tokenVault.address
         );
+
     });
 
     after(() => {

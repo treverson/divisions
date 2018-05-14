@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/gov/AddressBook.sol";
+import "../../../divisions/gov/AddressBook.sol";
 
 contract MockAddressBook is AAddressBook {
 
@@ -23,7 +23,7 @@ contract MockAddressBook is AAddressBook {
         index[getEntryIdentifier(_entry.name())] = _entry;
     }
 
-    function registerEntry(AAddressBookEntry _entry, address _owner) external onlyOwner {
+    function registerEntryOwner(AAddressBookEntry _entry, address _owner) external onlyOwner {
         bytes32 identifier = getEntryIdentifier(_entry.name());
         index[identifier] = _entry;
         ownership[address(_entry)] = _owner;

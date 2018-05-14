@@ -35,7 +35,7 @@ contract('Exchange', async accounts => {
         validator = accounts[1];
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
         treasury = await MockTreasury.new(casper.address, addressBook.address);
-        await addressBook.registerEntry(treasury.address, accounts[0]);
+        await addressBook.registerEntryOwner(treasury.address, accounts[0]);
 
         stakeManager = await MockStakeManager.new(casper.address, treasury.address, addressBook.address);
 
@@ -44,7 +44,7 @@ contract('Exchange', async accounts => {
 
     beforeEach(async () => {
         divToken = await MockDivisionsToken.new(addressBook.address);
-        await addressBook.registerEntry(divToken.address, accounts[0]);
+        await addressBook.registerEntryOwner(divToken.address, accounts[0]);
 
         exchange = await Exchange.new(
             divToken.address,
@@ -54,7 +54,7 @@ contract('Exchange', async accounts => {
             addressBook.address
         );
 
-        await addressBook.registerEntry(exchange.address, accounts[0]);
+        await addressBook.registerEntryOwner(exchange.address, accounts[0]);
         
         await stakeManager.setExchange(exchange.address);
         await divToken.transferMintership(exchange.address);

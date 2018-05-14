@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./AddressBookEntry.sol";
 
 contract AAddressBook is Ownable {
@@ -13,7 +13,7 @@ contract AAddressBook is Ownable {
 
     function registerEntry(AAddressBookEntry _entry) external onlyOwner;
     
-    function registerEntry(AAddressBookEntry _entry, address _owner) external onlyOwner;
+    function registerEntryOwner(AAddressBookEntry _entry, address _owner) external onlyOwner;
 
     function getEntryIdentifier(string _name) public pure returns (bytes32 identifier);
 
@@ -47,7 +47,7 @@ contract AddressBook is AAddressBook {
         emit EntrySet(identifier, _entry);
     }
 
-    function registerEntry(AAddressBookEntry _entry, address _owner) external onlyOwner {
+    function registerEntryOwner(AAddressBookEntry _entry, address _owner) external onlyOwner {
         bytes32 identifier = _entry.identifier();
         index[identifier] = _entry;
         ownership[address(_entry)] = _owner;

@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/token/DivisionsToken.sol";
+import "../../../divisions/token/DivisionsToken.sol";
 
 contract MockDivisionsToken is ADivisionsToken {
 

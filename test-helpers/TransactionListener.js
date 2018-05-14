@@ -21,8 +21,8 @@ module.exports = class {
                 eventHandlers[txHash] = (args) => {
                     args.txHash = txHash;
                     
-                    resolve(args);
                     delete eventHandlers[txHash];
+                    resolve(args);
                 }
                 
             });

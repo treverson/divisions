@@ -31,10 +31,10 @@ contract('Treasury', async accounts => {
 
         casper = await MockCasper.new(minDepositSize, epochLength, dynastyLogoutDelay, withdrawalDelay);
         treasury = await Treasury.new(casper.address, addressBook.address);
-        await addressBook.registerEntry(treasury.address, accounts[0]);
+        await addressBook.registerEntryOwner(treasury.address, accounts[0]);
 
         exchange = await MockExchange.new(treasury.address, addressBook.address);
-        await addressBook.registerEntry(exchange.address, accounts[0]);
+        await addressBook.registerEntryOwner(exchange.address, accounts[0]);
     });
 
     beforeEach(async () => {

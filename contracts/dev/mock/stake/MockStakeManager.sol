@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/stake/StakeManager.sol";
+import "../../../divisions/stake/StakeManager.sol";
 
 import "./MockWithdrawalBox.sol";
 

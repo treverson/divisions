@@ -5,11 +5,10 @@ import "./AddressBookEntry.sol";
 import "../token/CallingToken.sol";
 import "../token/ITokenRecipient.sol";
 
-import "../../../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
-
 contract ATokenVault is AddressBookEntry, ITokenRecipient {
 
     uint256 public totalLocked;
+    uint256 public totalLockedLastBlock;
 
     struct Locker {
         // The amount of DIVG that is locked
@@ -29,6 +28,8 @@ contract ATokenVault is AddressBookEntry, ITokenRecipient {
 
 contract TokenVault is ATokenVault {
     using SafeMath for uint256;
+
+    uint256 totalLockedLastUpdatedAt;
 
     string private tokenName;
 
@@ -50,6 +51,10 @@ contract TokenVault is ATokenVault {
     }
 
     function lockTokens(uint256 _amount, address _owner) internal {
+        if(totalLockedLastUpdatedAt < block.timestamp){
+            totalLockedLastBlock = totalLocked;
+            totalLockedLastUpdatedAt = block.timestamp;
+        }
 
         getToken().transferFrom(_owner, address(this), _amount);
         
@@ -63,6 +68,11 @@ contract TokenVault is ATokenVault {
     }
 
     function unlockTokens(uint256 _amount) external {
+        if(totalLockedLastUpdatedAt < block.timestamp){
+            totalLockedLastBlock = totalLocked;
+            totalLockedLastUpdatedAt = block.timestamp;
+        }
+
         Locker storage locker = lockers[msg.sender];
         
         // SafeMath.sub() checks for underflow and

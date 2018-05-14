@@ -17,7 +17,7 @@ contract('DivisionsToken', async accounts => {
         addressBook = await MockAddressBook.new();
 
         divisionsToken = await DivisionsToken.new(addressBook.address);
-        await addressBook.registerEntry(divisionsToken.address, accounts[0]);
+        await addressBook.registerEntryOwner(divisionsToken.address, accounts[0]);
 
         tokenRecipient = await MockTokenRecipient.new();
     });

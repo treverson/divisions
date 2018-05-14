@@ -7,21 +7,21 @@ module.exports = async (transaction, event, params, message) => {
     let out, temp;
     try {
         out = await transactionListener.listen(transaction, event, 8000);
-        temp = out;
+        temp = Object.assign({}, out);
         delete temp.txHash;
         if (params) {
 
             for (var key in params) {
                 if (params[key] === '@any' && temp[key]) {
                     delete params[key];
-                    deletetempout[key];
+                    delete temp[key];
                 }
             }
 
             assert.deepEqual(temp, params, message);
         }
     } catch (err) {
-    
+
         assert.fail(err.message);
     } finally {
         transactionListener.dispose();

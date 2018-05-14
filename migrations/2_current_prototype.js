@@ -31,13 +31,16 @@ const QUORUM_FRACTION_MULTIPLIED = 0.5e18;
 
 const GOVERNANCE_TOKEN_NAME = "GovernanceToken";
 
-const validator = web3.eth.accounts[1];
-const president = web3.eth.accounts[0];
+const accounts = web3.eth.accounts;
+
+const validator = accounts[1];
+const president = accounts[0];
 
 module.exports = async deployer => {
     
     try {
-        await deployer.deploy(AddressBook, web3.eth.accounts[0]);
+        /** Deploy contracts **/
+        await deployer.deploy(AddressBook, accounts[0]);
 
         await deployer.deploy(
             MockCasper,
@@ -72,36 +75,46 @@ module.exports = async deployer => {
         );
 
         await deployer.deploy(GovernanceToken, GOV_TOKEN_INITIAL_SUPPLY);
+
         await deployer.deploy(
             Senate,
-            AddressBook.address,
             president,
             DEBATING_PERIOD_SECS,
-            QUORUM_FRACTION_MULTIPLIED
+            QUORUM_FRACTION_MULTIPLIED,
+            AddressBook.address
         );
 
         await deployer.deploy(TokenVault, AddressBook.address, GOVERNANCE_TOKEN_NAME);
 
+        /** Set parameters **/
         let deployedAddressBook = AddressBook.at(AddressBook.address);
-        await deployedAddressBook.registerEntry(TokenVault.address, Senate.address);
-        await deployedAddressBook.registerEntry(StakeManager.address, Senate.address);
-        await deployedAddressBook.registerEntry(Exchange.address, Senate.address);
-        await deployedAddressBook.registerEntry(DivisionsToken.address, Senate.address);
-        await deployedAddressBook.registerEntry(Treasury.address, Senate.address);
+
+        await deployedAddressBook.setEntryOwner(Treasury.address, accounts[0]);
+        let deployedTreasury = Treasury.at(Treasury.address);
+        await deployedTreasury.setStakeManager(StakeManager.address);
+        await deployedTreasury.setExchange(Exchange.address);
+        
+        await deployedAddressBook.setEntryOwner(DivisionsToken.address, accounts[0]);
+        let deployedDivToken = DivisionsToken.at(DivisionsToken.address);
+        await deployedDivToken.transferMintership(Exchange.address);
+
+        /** Register contracts at addressbook along with their owners **/
+
+        await deployedAddressBook.registerEntryOwner(TokenVault.address, Senate.address);
+        await deployedAddressBook.registerEntryOwner(StakeManager.address, Senate.address);
+        await deployedAddressBook.registerEntryOwner(Exchange.address, Senate.address);
+        await deployedAddressBook.registerEntryOwner(DivisionsToken.address, Senate.address);
+        await deployedAddressBook.registerEntryOwner(Treasury.address, Senate.address);
         
         await deployedAddressBook.setEntry(
             await deployedAddressBook.getEntryIdentifier("GovernanceToken"),
             GovernanceToken.address
         );
 
-        let deployedTreasury = Treasury.at(Treasury.address);
-        await deployedTreasury.setStakeManager(StakeManager.address);
-        await deployedTreasury.setExchange(Exchange.address);
-        
-        let deployedDivToken = DivisionsToken.at(DivisionsToken.address);
-        await deployedDivToken.transferMintership(Exchange.address);
-
+        /** Transfer ownership of AddressBook to Senate **/
         await deployedAddressBook.transferOwnership(Senate.address);
+
+        /** Store addresses in file **/
 
         let addresses = {
             tokenVault: TokenVault.address,

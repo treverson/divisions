@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "../../divisions/stake/WithdrawalBox.sol";
+import "../../../divisions/stake/WithdrawalBox.sol";
 
 contract MockWithdrawalBox is AWithdrawalBox {
     
