@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const ADDRESS_JSON_PATH = "addresses.json";
+const ADDRESS_JSON_PATH = "build/addresses.json";
 
 let AddressBook = artifacts.require('AddressBook');
 
