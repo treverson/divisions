@@ -1,7 +1,7 @@
 pragma solidity 0.4.23;
 
 import "../gov/AddressBookEntry.sol";
-import "zeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "./Treasury.sol";
 import "./WithdrawalBox.sol";

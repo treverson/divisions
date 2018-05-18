@@ -1,8 +1,8 @@
 pragma solidity 0.4.23;
 
 import "../gov/AddressBookEntry.sol";
-import "zeppelin-solidity/contracts/payment/PullPayment.sol";
-import "zeppelin-solidity/contracts/math/Math.sol";
+import "openzeppelin-solidity/contracts/payment/PullPayment.sol";
+import "openzeppelin-solidity/contracts/math/Math.sol";
 
 import "../stake/Treasury.sol";
 import "../stake/StakeManager.sol";
