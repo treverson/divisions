@@ -81,7 +81,7 @@ contract('TokenVault', async accounts => {
         await govToken.approve(tokenVault.address, lockAmount);
 
         await expectEvent(
-            tokenVault.lockTokens.sendTransaction(lockAmount),
+            tokenVault.lockTokens(lockAmount),
             tokenVault.TokensLocked(),
             { owner: accounts[0], amount: lockAmount }
         );
@@ -128,7 +128,7 @@ contract('TokenVault', async accounts => {
         await tokenVault.lockTokens(lockAmount);
 
         await expectEvent(
-            tokenVault.unlockTokens.sendTransaction(lockAmount),
+            tokenVault.unlockTokens(lockAmount),
             tokenVault.TokensUnlocked(),
             {
                 owner: accounts[0],

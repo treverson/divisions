@@ -118,12 +118,12 @@ contract('Exchange', async accounts => {
 
     it('logs an event on placeBuyOrder', async () => {
         let buyer = accounts[1];
-        let buyAmount = web3.toWei(2, 'ether');
+        let buyAmount = web3.toBigNumber(web3.toWei(2, 'ether'));
 
         let buyOrdersLength = await exchange.buyOrdersLength();
 
         await expectEvent(
-            exchange.placeBuyOrder.sendTransaction({ from: buyer, value: buyAmount }),
+            exchange.placeBuyOrder({ from: buyer, value: buyAmount }),
             exchange.BuyOrderPlaced(),
             { index: buyOrdersLength, sender: buyer, amount: buyAmount }
         );
@@ -282,7 +282,7 @@ contract('Exchange', async accounts => {
 
     it('logs an event on placeSellOrder', async () => {
         let seller = accounts[1];
-        let sellAmount = web3.toBigNumber(2e18);
+        let sellAmount = web3.toBigNumber(web3.toBigNumber(2e18));
 
         await divToken.mint(seller, sellAmount);
         await divToken.approve(exchange.address, sellAmount, { from: seller });
@@ -290,8 +290,8 @@ contract('Exchange', async accounts => {
         let sellOrdersLength = await exchange.sellOrdersLength();
 
         await expectEvent(
-            exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
-            exchange.BuyOrderPlaced(),
+            exchange.placeSellOrder(sellAmount, { from: seller }),
+            exchange.SellOrderPlaced(),
             { index: sellOrdersLength, sender: seller, amount: sellAmount }
         );
     });
@@ -468,13 +468,13 @@ contract('Exchange', async accounts => {
 
     it('logs an event on fillBuyOrder', async () => {
         let seller = accounts[2];
-        let sellAmount = web3.toBigNumber(100e18);
+        let sellAmount = web3.toBigNumber(web3.toBigNumber(100e18));
         await divToken.mint(seller, sellAmount);
         await divToken.approve(exchange.address, sellAmount, { from: seller });
         await exchange.placeSellOrder(sellAmount, { from: seller });
 
         let buyer = accounts[1]
-        let buyAmount = web3.toWei(4, 'ether');
+        let buyAmount = web3.toBigNumber(web3.toWei(4, 'ether'));
         let buyOrderIndex;
         try {
             buyOrderIndex = (await transactionListener.listen(
@@ -486,7 +486,7 @@ contract('Exchange', async accounts => {
         }
 
         await expectEvent(
-            exchange.fillBuyOrder.sendTransaction(buyOrderIndex),
+            exchange.fillBuyOrder(buyOrderIndex),
             exchange.BuyOrderFilled(),
             { index: buyOrderIndex, amountFilled: buyAmount }
         );
@@ -583,7 +583,7 @@ contract('Exchange', async accounts => {
         }
 
         await expectEvent(
-            exchange.fillSellOrder.sendTransaction(sellOrderIndex),
+            exchange.fillSellOrder(sellOrderIndex),
             exchange.SellOrderFilled(),
             { index: sellOrderIndex, amountFilled: sellAmount }
         );
@@ -929,7 +929,7 @@ contract('Exchange', async accounts => {
         let weiReserveBefore = await exchange.weiReserve();
 
         await expectEvent(
-            stakeManager.simulateFillTreasury.sendTransaction(totalBuyAmount),
+            stakeManager.simulateFillTreasury(totalBuyAmount),
             treasury.DepositCalled(),
             { from: exchange.address, value: totalBuyAmount }
         );

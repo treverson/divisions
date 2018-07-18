@@ -52,9 +52,9 @@ contract('Prototype 2', async accounts => {
 
         // Deposit
         let stakeAmount = await stakeManager.getStakeableAmount();
-
+        console.log(casper.address);
         let out = await expectEvent(
-            stakeManager.makeStakeDeposit.sendTransaction(),
+            stakeManager.makeStakeDeposit(),
             casper.DepositCalled(),
             {
                 validation_addr: validator,
@@ -75,7 +75,7 @@ contract('Prototype 2', async accounts => {
         let sourceEpoch = 11;
 
         await expectEvent(
-            stakeManager.vote.sendTransaction(
+            stakeManager.vote(
                 vote,
                 validatorIndex,
                 targetHash,
@@ -97,14 +97,14 @@ contract('Prototype 2', async accounts => {
 
         // Withdraw
         await expectEvent(
-            casper.withdraw.sendTransaction(validatorIndex),
+            casper.withdraw(validatorIndex),
             withdrawalBox.EtherReceived(),
             { amount: stakeAmount }
         );
 
         // Sweep
         await expectEvent(
-            treasury.sweep.sendTransaction(withdrawalBox.address),
+            treasury.sweep(withdrawalBox.address),
             treasury.Deposit(),
             { from: withdrawalBox.address, amount: stakeAmount }
         )

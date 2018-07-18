@@ -1,30 +1,41 @@
 "use strict";
 
-let TransactionListener = require('./TransactionListener');
-let transactionListener = new TransactionListener();
-module.exports = async (transaction, event, params, message) => {
-    if (!message) message = "Event not logged with correct params";
-    let out, temp;
+module.exports = async function (transaction, event, params, message) {
+    message = (message || "Event not logged with correct params");
+
     try {
-        out = await transactionListener.listen(transaction, event, 8000);
-        temp = Object.assign({}, out);
-        delete temp.txHash;
-        if (params) {
+        let txHash = (await transaction).tx;
+        let events = await new Promise((resolve, reject) => {
+            event.get((err, res) => {
+                if (err) reject(err);
+                else resolve(res);
+            });
+        });
 
-            for (var key in params) {
-                if (params[key] === '@any' && temp[key]) {
-                    delete params[key];
-                    delete temp[key];
-                }
+        let eventArgs;
+        for (let event of events) {
+            if (event.transactionHash == txHash) {
+                eventArgs = event.args;
+                break;
             }
-
-            assert.deepEqual(temp, params, message);
         }
-    } catch (err) {
+        if(!eventArgs)
+            assert.fail("No event logged");
 
-        assert.fail(err.message);
-    } finally {
-        transactionListener.dispose();
-        return out;
+        for (var key in params) {
+            if (params[key] === '@any' && eventArgs[key]) {
+                delete params[key];
+                delete eventArgs[key];
+            }
+        }
+        if (params) {
+            assert.deepEqual(eventArgs, params, message);
+        }
+        eventArgs.txHash = txHash;
+        return eventArgs;
+    } catch (err) {
+    
+        if (err.__proto__.toString() == "AssertionError") throw (err);
+        else assert.fail("Error", err);
     }
 }

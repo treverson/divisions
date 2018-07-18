@@ -83,6 +83,7 @@ contract Treasury is ATreasury {
         
         emit Transfer(address(exchange), _amount);
     }
+    
 
     function deposit() external payable {
         handleDeposit(msg.sender, msg.value);
@@ -90,10 +91,11 @@ contract Treasury is ATreasury {
 
     function stake(uint256 _amount, address _validatorAddress, AWithdrawalBox _withdrawalBox) external onlyStakeManager {
         casper.deposit.value(_amount)(_validatorAddress, _withdrawalBox);
-        
         emit Stake(_validatorAddress, _withdrawalBox, _amount);
     }
-
+    event Debug(uint256 v);
+    event Debug(uint256 amount, address validattor, AWithdrawalBox box);
+    
     function sweep(AWithdrawalBox _withdrawalBox) external {
         _withdrawalBox.sweep();
         emit Sweep(_withdrawalBox);

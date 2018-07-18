@@ -78,8 +78,8 @@ contract('StakeManager', async accounts => {
         let oldValidator = await stakeManager.validator();
         let newValidator = accounts[8];
 
-        expectEvent(
-            stakeManager.transferValidatorship.sendTransaction(newValidator),
+        await expectEvent(
+            stakeManager.transferValidatorship(newValidator),
             stakeManager.ValidatorshipTransferred(),
             { oldValidator: oldValidator, newValidator: newValidator }
         );
@@ -105,7 +105,7 @@ contract('StakeManager', async accounts => {
         let newTreasury = accounts[6];
 
         await expectEvent(
-            stakeManager.setTreasury.sendTransaction(newTreasury),
+            stakeManager.setTreasury(newTreasury),
             stakeManager.TreasurySet(),
             { oldTreasury: oldTreasury, newTreasury: newTreasury }
         );
@@ -153,7 +153,7 @@ contract('StakeManager', async accounts => {
         let stakeAmount = await stakeManager.getStakeableAmount();
 
         await expectEvent(
-            stakeManager.makeStakeDeposit.sendTransaction(),
+            stakeManager.makeStakeDeposit(),
             treasury.StakeCalled(),
             {
                 amount: stakeAmount,
@@ -202,7 +202,7 @@ contract('StakeManager', async accounts => {
         let nextValidatorIndex = await casper.next_validator_index();
 
         await expectEvent(
-            stakeManager.makeStakeDeposit.sendTransaction(),
+            stakeManager.makeStakeDeposit(),
             stakeManager.WithdrawalBoxDeployed(),
             {
                 withdrawalBox: '@any',
@@ -226,7 +226,7 @@ contract('StakeManager', async accounts => {
         let sourceEpoch = 101;
 
         await expectEvent(
-            stakeManager.vote.sendTransaction(
+            stakeManager.vote(
                 messageRLP,
                 validatorIndex,
                 targetHash,

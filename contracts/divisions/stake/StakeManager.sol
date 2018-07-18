@@ -150,7 +150,7 @@ contract StakeManager is AStakeManager {
     {
         // To store the vote even when it's rejected, use low-level call
         bool accepted = address(casper)
-            .call(bytes4(keccak256(abi.encodePacked("vote(bytes)"))), _messageRLP);
+            .call(abi.encodeWithSignature("vote(bytes)", _messageRLP));
         
         votes[_validatorIndex][_targetEpoch] = VoteMessage({
             messageRLP: _messageRLP,

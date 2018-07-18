@@ -89,7 +89,7 @@ contract('Senate', async accounts => {
         let proposalsLengthBefore = await senate.proposalsLength();
 
         await expectEvent(
-            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
+            senate.makeProposal(target, data, value, description, { from: president }),
             senate.ProposalMade(),
             { index: proposalsLengthBefore }
         );
@@ -226,7 +226,7 @@ contract('Senate', async accounts => {
         )).index;
 
         await expectEvent(
-            senate.vote.sendTransaction(proposalIndex, true),
+            senate.vote(proposalIndex, true),
             senate.Voted(),
             {
                 proposalIndex: proposalIndex,
@@ -275,10 +275,10 @@ contract('Senate', async accounts => {
         );
 
         await expectEvent(
-            senate.executeProposal.sendTransaction(proposalIndex, calldata),
+            senate.executeProposal(proposalIndex, calldata),
             subject.ValueSet(),
             {
-                value: 123
+                value: web3.toBigNumber(123)
             }
         );
 
@@ -329,7 +329,7 @@ contract('Senate', async accounts => {
         await timeout.resolve((DEBATING_PERIOD_SECS + 2) * 1000);
 
         await expectEvent(
-            senate.executeProposal.sendTransaction(proposalIndex, calldata),
+            senate.executeProposal(proposalIndex, calldata),
             senate.ProposalExecuted(),
             { index: proposalIndex }
         );
@@ -417,7 +417,7 @@ contract('Senate', async accounts => {
         await timeout.resolve((DEBATING_PERIOD_SECS + 2) * 1000);
 
         await expectEvent(
-            senate.executeProposal.sendTransaction(proposalIndex, calldata),
+            senate.executeProposal(proposalIndex, calldata),
             senate.VotingRulesChanged()
         );
     });
@@ -545,7 +545,7 @@ contract('Senate', async accounts => {
 
     it('logs an event on setPresident', async () => {
         await expectEvent(
-            senate.setPresident.sendTransaction(accounts[1], {from: president}),
+            senate.setPresident(accounts[1], {from: president}),
             senate.PresidentSet(),
             {
                 previousPresident: president,

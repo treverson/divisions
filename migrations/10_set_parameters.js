@@ -15,7 +15,6 @@ let TokenVault = artifacts.require('TokenVault');
 let Senate = artifacts.require('Senate');
 
 
-
 module.exports = async (deployer, network, accounts) => {
     let validator = accounts[0];
     let president = accounts[0];
