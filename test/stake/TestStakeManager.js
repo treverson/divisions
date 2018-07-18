@@ -8,7 +8,6 @@ const AWithdrawalBox = artifacts.require('AWithdrawalBox');
 const MockTreasury = artifacts.require('MockTreasury');
 const MockCasper = artifacts.require('MockCasper');
 const MockExchange = artifacts.require('MockExchange');
-const MockAddressBook = artifacts.require('MockAddressBook');
 
 const MIN_DEPOSIT_SIZE = web3.toWei(20, 'ether');
 const EPOCH_LENGTH = 20;
@@ -22,19 +21,16 @@ contract('StakeManager', async accounts => {
     let treasury;
     let stakeManager;
     let exchange;
-    let addressBook;
+    
     before(async () => {
-        addressBook = await MockAddressBook.new();
 
         validator = accounts[9];
 
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
 
-        treasury = await MockTreasury.new(casper.address, addressBook.address);
-        await addressBook.registerEntryOwner(treasury.address, accounts[0]);
+        treasury = await MockTreasury.new(casper.address);
 
-        exchange = await MockExchange.new(treasury.address, addressBook.address);
-        await addressBook.registerEntryOwner(exchange.address, accounts[0]);
+        exchange = await MockExchange.new(treasury.address);
         
         await treasury.setExchange(exchange.address);
 
@@ -42,9 +38,7 @@ contract('StakeManager', async accounts => {
             casper.address,
             validator,
             treasury.address,
-            addressBook.address
         );
-        await addressBook.registerEntryOwner(stakeManager.address, accounts[0]);
 
         await treasury.setStakeManager(stakeManager.address);
     });

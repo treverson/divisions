@@ -1,10 +1,10 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
-import "../gov/AddressBookEntry.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "./CallingToken.sol";
 
-contract ADivisionsToken is CallingToken, AddressBookEntry {
+contract ADivisionsToken is CallingToken, Ownable {
     address public minter;
 
     string public symbol;
@@ -24,8 +24,7 @@ contract ADivisionsToken is CallingToken, AddressBookEntry {
 contract DivisionsToken is ADivisionsToken {
     using SafeMath for uint256;
 
-    constructor(AAddressBook _addressBook)
-    AddressBookEntry(_addressBook, "DivisionsToken")
+    constructor()
     public 
     {
         symbol = "DIV";

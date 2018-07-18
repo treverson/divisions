@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 contract ACasper {
     event Deposit(address indexed _from, int128 indexed _validator_index, address _validation_address, int128 _start_dyn, int128 _amount);
@@ -52,4 +52,5 @@ contract ACasper {
 
     function deposit_size(int128 validator_index) public view returns (int128);
 
+    function withdraw(int128 validator_index) public;
 }

@@ -5,8 +5,6 @@ let transactionListener = new TransactionListener();
 let BigNumber = web3.__proto__.BigNumber;
 // ============ Test Exchange ============ //
 
-const MockAddressBook = artifacts.require('MockAddressBook');
-
 const Exchange = artifacts.require('Exchange');
 const MockDivisionsToken = artifacts.require('MockDivisionsToken');
 const MockStakeManager = artifacts.require('MockStakeManager');
@@ -27,34 +25,27 @@ contract('Exchange', async accounts => {
     let casper;
     let treasury;
     let validator;
-    let addressBook;
 
     before(async () => {
-        addressBook = await MockAddressBook.new();
 
         validator = accounts[1];
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);
-        treasury = await MockTreasury.new(casper.address, addressBook.address);
-        await addressBook.registerEntryOwner(treasury.address, accounts[0]);
+        treasury = await MockTreasury.new(casper.address);
 
-        stakeManager = await MockStakeManager.new(casper.address, treasury.address, addressBook.address);
+        stakeManager = await MockStakeManager.new(casper.address, treasury.address);
 
         await treasury.setStakeManager(stakeManager.address);
     });
 
     beforeEach(async () => {
-        divToken = await MockDivisionsToken.new(addressBook.address);
-        await addressBook.registerEntryOwner(divToken.address, accounts[0]);
+        divToken = await MockDivisionsToken.new();
 
         exchange = await Exchange.new(
             divToken.address,
             stakeManager.address, 
             web3.toWei(0.01, "ether"),
-            0.01e18,
-            addressBook.address
+            0.01e18
         );
-
-        await addressBook.registerEntryOwner(exchange.address, accounts[0]);
         
         await stakeManager.setExchange(exchange.address);
         await divToken.transferMintership(exchange.address);
@@ -74,9 +65,8 @@ contract('Exchange', async accounts => {
 
     it('calculates the wei reserve', async () => {
         let exchangeBalance = await web3.eth.getBalance(exchange.address);
-        let exchangeTotalPayments = await exchange.totalPayments();
 
-        let expectedWeiReserve = exchangeBalance.minus(exchangeTotalPayments);
+        let expectedWeiReserve = exchangeBalance;
 
         let actualWeiReserve = await exchange.weiReserve();
 
@@ -599,7 +589,6 @@ contract('Exchange', async accounts => {
         );
     });
 
-
     it('instantly fills buy and sell orders on placeAndFillBuyOrder', async () => {
         let buyAmount = web3.toBigNumber(web3.toWei(3, 'ether'));
         let buyer = accounts[1];
@@ -712,7 +701,6 @@ contract('Exchange', async accounts => {
             "The buy order was not filled"
         );
     });
-
 
     it('cancels buy orders', async () => {
         let orderIndexes = [];

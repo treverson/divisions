@@ -1,15 +1,16 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
-import "../gov/AddressBookEntry.sol";
-import "openzeppelin-solidity/contracts/payment/PullPayment.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/math/Math.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/payment/PullPayment.sol";
 
 import "../stake/Treasury.sol";
 import "../stake/StakeManager.sol";
 import "../token/DivisionsToken.sol";
 import "../token/ITokenRecipient.sol";
 
-contract AExchange is AddressBookEntry, PullPayment, ITokenRecipient {
+contract AExchange is PullPayment, ITokenRecipient, Ownable {
     ATreasury public treasury;
     ADivisionsToken public divToken;
     AStakeManager public stakeManager;
@@ -29,8 +30,8 @@ contract AExchange is AddressBookEntry, PullPayment, ITokenRecipient {
     // The minumum amount of a sell order in DIV
     uint256 public minSellOrderAmount;
     
-    function setMinBuyOrderAmount(uint256 _min) external onlyOwner();
-    function setMinSellOrderAmount(uint256 _max) external onlyOwner();
+    function setMinBuyOrderAmount(uint256 _min) external;
+    function setMinSellOrderAmount(uint256 _max) external;
 
     Order[] public buyOrders;
     //All buy orders with index < buyOrderCursor are finished
@@ -112,17 +113,17 @@ contract AExchange is AddressBookEntry, PullPayment, ITokenRecipient {
 
 contract Exchange is AExchange {
 
+    using SafeMath for uint256;
+
     uint64 constant priceMultiplier = 1e18;
 
     constructor(
         ADivisionsToken _divToken,
         AStakeManager _stakeManager,
         uint256 _minBuyOrderAmount,
-        uint256 _minSellOrderAmount,
-        AAddressBook _addressBook
+        uint256 _minSellOrderAmount
     ) 
     public
-    AddressBookEntry(_addressBook, "Exchange")
     {
         divToken = _divToken;
         stakeManager = _stakeManager;
@@ -161,10 +162,9 @@ contract Exchange is AExchange {
 
         Order storage sellOrder = placeSellOrder(_value, _from);
         
-        // if _extraData == 0xef0c7686
-        if(_extraData.length == 4 && keccak256(_extraData) == keccak256(bytes4(keccak256("placeAndFillSellOrder")))) {
+        // if _extraData == bytes4(keccak256(abi.encode("placeAndFillSellOrder"))) == 0xef0c7686
+        if(bytes4(keccak256(abi.encode(_extraData))) == 0xf3bd6f2a)
             fillSellOrderWithBuyOrders(sellOrder, divPrice());    
-        }        
     }
 
     function buyOrdersLength() public view returns (uint256) {
@@ -176,7 +176,7 @@ contract Exchange is AExchange {
     }
 
     function weiReserve() public view returns (uint256 reserve) {
-        return reserve = address(this).balance.sub(totalPayments);
+        return reserve = address(this).balance;
     }
 
     function divReserve() public view returns (uint256 reserve) {
@@ -334,7 +334,7 @@ contract Exchange is AExchange {
         uint256 tempCursor = sellOrderCursor;
         while(amountLeftToFill > 0) {
             Order storage sellOrder = getNextSellOrder(tempCursor);
-            
+
             if(sellOrder.sender == address(0))
                 break;
             
@@ -402,7 +402,7 @@ contract Exchange is AExchange {
                 totalSellAmountFilled += filledAmount;
                 
                 // Send the equivalent in wei to the sender
-                asyncSend(_sellOrder.sender, toWei(filledAmount, _divPrice));
+                asyncTransfer(_sellOrder.sender, toWei(filledAmount, _divPrice));
 
                 emit SellOrderFilled(_sellOrder.index, filledAmount);
 
@@ -425,7 +425,7 @@ contract Exchange is AExchange {
         
         buyOrder.amountCancelled += amountLeft;
         buyOrder.finished = true;
-        asyncSend(buyOrder.sender, amountLeft);
+        asyncTransfer(buyOrder.sender, amountLeft);
 
         emit BuyOrderCanceled(_index);
     }
@@ -489,7 +489,9 @@ contract Exchange is AExchange {
 
     function receiveEtherDeposit() external payable {
         uint256 price = divPrice();
+        
         uint256 amountLeftToFill = toDiv(msg.value, price);
+        
         require(divReserve() >= amountLeftToFill, "Not enough DIV reserve");
         
         divToken.burn(amountLeftToFill);

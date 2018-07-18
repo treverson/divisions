@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../../../divisions/exchange/Exchange.sol";
 
@@ -6,8 +6,7 @@ contract MockExchange is AExchange {
     uint256 weiReserve_ = 0;
     uint256 divReserve_ = 0;
 
-    constructor(ATreasury _treasury, AAddressBook _addressBook)
-    AddressBookEntry(_addressBook, "Exchange")
+    constructor(ATreasury _treasury)
     public {
         treasury = _treasury;
     }

@@ -1,3 +1,8 @@
+var HDWalletProvider = require("truffle-hdwallet-provider");
+var fs = require('fs');
+
+var constants = JSON.parse(fs.readFileSync('truffle-config-constants.json'));
+
 let truffleOptions = {
   solc: {
     optimizer: {
@@ -11,12 +16,16 @@ let truffleOptions = {
       port: 9545,
       network_id: "*", // Match any network id
     },
-    coverage: {
-      host: "localhost",
+    ropsten: {
+      provider: () => new HDWalletProvider(constants.mnemonic, "https://ropsten.infura.io/" + constants.infuraAccessToken),
+      network_id: 3,
+      gas: 4700000,
+    },   
+    casper: {
+      provider: () => new HDWalletProvider(constants.mnemonic, "http://52.87.179.32"),
+      port: 8080,
       network_id: "*",
-      port: 9545,         // <-- If you change this, also set the port option in .solcover.js.
-      gas: 0xffffffffffff, // <-- Use this high gas value
-      gasPrice: 0x01      // <-- Use this low gas price
+      gas: 500000,
     }
   }
 };

@@ -3,7 +3,6 @@ const expectEvent = require("../../test-helpers/expectEvent");
 
 // ============ Test TokenVault ============ //
 
-const AddressBook = artifacts.require('AddressBook');
 const TokenVault = artifacts.require('TokenVault');
 const GovernanceToken = artifacts.require('GovernanceToken');
 
@@ -11,18 +10,13 @@ const GOV_TOKEN_INITIAL_SUPPLY = 180e6 * 1e18;
 
 contract('TokenVault', async accounts => {
     let tokenVault;
-    let addressBook;
     let govToken;
 
     before(async () => {
 
-        addressBook = await AddressBook.new(accounts[0]);
-
-        tokenVault = await TokenVault.new(addressBook.address, "GovernanceToken");
-
         govToken = await GovernanceToken.new(GOV_TOKEN_INITIAL_SUPPLY);
-        await addressBook.registerEntry(tokenVault.address);
-        await addressBook.setEntry(await addressBook.getEntryIdentifier("GovernanceToken"), govToken.address);
+
+        tokenVault = await TokenVault.new(govToken.address);
     });
 
     it('locks tokens', async () => {

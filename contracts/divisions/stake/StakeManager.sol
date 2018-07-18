@@ -1,14 +1,14 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
-import "../gov/AddressBookEntry.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "./Treasury.sol";
 import "./WithdrawalBox.sol";
 import "./ACasper.sol";
 import "../exchange/Exchange.sol";
 
-contract AStakeManager is AddressBookEntry {
+contract AStakeManager is Ownable {
     
     struct VoteMessage {
         bytes messageRLP;
@@ -79,10 +79,8 @@ contract StakeManager is AStakeManager {
     constructor(
         ACasper _casper,
         address _validator,
-        ATreasury _treasury,
-        AAddressBook _addressBook
+        ATreasury _treasury
     ) 
-        AddressBookEntry(_addressBook, "StakeManager")
         public 
     {
         casper = _casper;
@@ -119,6 +117,7 @@ contract StakeManager is AStakeManager {
     }
 
     function refillExchange() external {
+        // Refill the exchange with enough money so that open sell orders can be filled
         uint256 refillSize = exchange.toWei(exchange.divReserve()).sub(exchange.weiReserve());
         treasury.transferToExchange(refillSize);
     }
@@ -151,7 +150,7 @@ contract StakeManager is AStakeManager {
     {
         // To store the vote even when it's rejected, use low-level call
         bool accepted = address(casper)
-            .call(bytes4(keccak256("vote(bytes)")), _messageRLP);
+            .call(bytes4(keccak256(abi.encodePacked("vote(bytes)"))), _messageRLP);
         
         votes[_validatorIndex][_targetEpoch] = VoteMessage({
             messageRLP: _messageRLP,

@@ -8,9 +8,9 @@ const timeout = require('../../test-helpers/timeout');
 
 const Senate = artifacts.require('Senate');
 
-const MockAddressBook = artifacts.require('MockAddressBook');
 const MockTokenRecipient = artifacts.require('MockTokenRecipient');
 const MockTokenVault = artifacts.require('MockTokenVault');
+const MockSenateSubject = artifacts.require('MockSenateSubject');
 
 const DEBATING_PERIOD_SECS = 2;
 const QOURUM_FRACTION = 0.1;
@@ -18,28 +18,20 @@ const QUORUM_MULTIPLIER = 10e18;
 
 contract('Senate', async accounts => {
     let senate;
-    let addressBook;
+    
     let tokenVault;
     let president = accounts[1];
 
-    before(async () => {
-        addressBook = await MockAddressBook.new(accounts[0]);
-    });
-
     beforeEach(async () => {
+
+        tokenVault = await MockTokenVault.new();
+
         senate = await Senate.new(
             president,
             DEBATING_PERIOD_SECS,
             QOURUM_FRACTION * QUORUM_MULTIPLIER,
-            addressBook.address
-        );
-
-        tokenVault = await MockTokenVault.new(addressBook.address);
-
-        await addressBook.registerEntry(
             tokenVault.address
         );
-
     });
 
     after(() => {
@@ -248,17 +240,19 @@ contract('Senate', async accounts => {
     });
 
     it('executes proposals', async () => {
+        let subject = await MockSenateSubject.new();
+
         await tokenVault.lockTokens(100e18);
 
         let weight = (await tokenVault.lockers(accounts[0]))[0];
         await timeout.resolve(1000);
 
-        let target = addressBook.address;
-        let calldata = "0xd61c205c656e7472790000000000000000000000000000000000000000000000000000000000000000000000000000006330a553fc93768f612722bb8c2ec78ac90b3bbc";
+        let target = subject.address;
+        let calldata = "0x55241077000000000000000000000000000000000000000000000000000000000000007b";
         let calldataHash = web3.sha3(calldata, { encoding: 'hex' });
 
         let value = 0;
-        let description = "addressBook.setEntry(\"entry\", " + accounts[8] + ");";
+        let description = "subject.setValue(123)";
 
         let proposalIndex = (await transactionListener.listen(
             senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
@@ -282,10 +276,9 @@ contract('Senate', async accounts => {
 
         await expectEvent(
             senate.executeProposal.sendTransaction(proposalIndex, calldata),
-            addressBook.EntrySet(),
+            subject.ValueSet(),
             {
-                identifier: '@any',
-                entry: accounts[8]
+                value: 123
             }
         );
 
@@ -312,17 +305,19 @@ contract('Senate', async accounts => {
     });
 
     it('logs an event on executeProposal', async () => {
+        let subject = await MockSenateSubject.new();
+
         await tokenVault.lockTokens(100e18);
 
         let weight = (await tokenVault.lockers(accounts[0]))[0];
         await timeout.resolve(1000);
 
-        let target = addressBook.address;
-        let calldata = "0xd61c205c656e7472790000000000000000000000000000000000000000000000000000000000000000000000000000006330a553fc93768f612722bb8c2ec78ac90b3bbc";
+        let target = subject.address;
+        let calldata = "0x55241077000000000000000000000000000000000000000000000000000000000000007b";
         let calldataHash = web3.sha3(calldata, { encoding: 'hex' });
 
         let value = 0;
-        let description = "addressBook.setEntry(\"entry\", " + accounts[8] + ");";
+        let description = "subject.setValue(123)";
 
         let proposalIndex = (await transactionListener.listen(
             senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
@@ -503,7 +498,7 @@ contract('Senate', async accounts => {
     });
 
     it('sets the president', async () => {
-        
+
         await expectThrow(
             senate.setPresident(accounts[9]),
             "Only the president can set the president directly"
@@ -525,10 +520,10 @@ contract('Senate', async accounts => {
             senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
             senate.ProposalMade()
         )).index;
-        
+
 
         await senate.vote(proposalIndex, true);
-    
+
         await timeout.resolve((DEBATING_PERIOD_SECS + 1) * 1000);
         await senate.executeProposal(proposalIndex, calldata);
 
@@ -545,7 +540,7 @@ contract('Senate', async accounts => {
             accounts[1],
             "The president was not set"
         );
-        
+
     });
 
     it('logs an event on setPresident', async () => {

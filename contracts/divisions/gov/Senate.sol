@@ -1,8 +1,7 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../token/GovernanceToken.sol";
 
-import "./AddressBook.sol";
 import "./TokenVault.sol";
 
 contract ASenate {
@@ -28,7 +27,6 @@ contract ASenate {
         bool inSupport;
     }
     
-    AAddressBook addressBook;
     address public president;
 
     uint256 public debatingPeriod;
@@ -37,6 +35,8 @@ contract ASenate {
     uint256 public quorumFractionMultiplied;
 
     Proposal[] public proposals;
+
+    ATokenVault internal tokenVault_;
 
     function proposalsLength() external view returns (uint256 length);
 
@@ -90,15 +90,15 @@ contract Senate is ASenate {
         address _president,
         uint256 _debatingPeriod,
         uint256 _quorumFractionMultiplied,
-        AAddressBook _addressBook
+        ATokenVault _tokenVault
     )
         public 
     {
         president = _president;
-        addressBook = _addressBook;
 
         debatingPeriod = _debatingPeriod * 1 seconds;
         quorumFractionMultiplied = _quorumFractionMultiplied;
+        tokenVault_ = _tokenVault;
     }
 
     function proposalsLength() external view returns (uint256 length) {
@@ -149,7 +149,7 @@ contract Senate is ASenate {
         proposal.description = _description;
         proposal.createdAt = block.timestamp;
 
-        proposal.totalLockedTokens = getTokenVault().totalLockedLastBlock();
+        proposal.totalLockedTokens = tokenVault_.totalLockedLastBlock();
         
         // Push empty as voteIndexes uses index 0 to indicate that
         // an account has not yet voted
@@ -166,7 +166,7 @@ contract Senate is ASenate {
 
         uint256 amountLocked;
         uint256 lastIncreasedAt;
-        (amountLocked, lastIncreasedAt) = getTokenVault().lockers(msg.sender);
+        (amountLocked, lastIncreasedAt) = tokenVault_.lockers(msg.sender);
         
         require(amountLocked > 0, "Can only vote when more that 0 GOV is locked");
         require(lastIncreasedAt < proposal.createdAt, "Can only vote with GOV that is locked before the proposal was created");
@@ -222,11 +222,6 @@ contract Senate is ASenate {
     {
         emit PresidentSet(president, _newPresident);
         president = _newPresident;
-    }
-
-
-    function getTokenVault() internal view returns (ATokenVault tokenVault) {
-        return tokenVault = ATokenVault(addressBook.index(addressBook.getEntryIdentifier("TokenVault")));
     }
 
     function proposalDebatingPeriodEnded(uint256 _index) external view returns (bool ended) {

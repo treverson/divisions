@@ -1,15 +1,10 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../../../divisions/gov/TokenVault.sol";
 import "../token/MockTokenRecipient.sol";
 
 contract MockTokenVault is ATokenVault, MockTokenRecipient {
     uint256 totalLockedLastUpdatedAt;
-
-    constructor(AAddressBook _addressBook)
-        AddressBookEntry(_addressBook, "TokenVault")
-        public
-    {}
 
     function lockTokens(uint256 _amount) external {
         if(totalLockedLastUpdatedAt < block.timestamp){

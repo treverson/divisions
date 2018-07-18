@@ -5,19 +5,14 @@ const expectEvent = require("../../test-helpers/expectEvent");
 
 const DivisionsToken = artifacts.require('DivisionsToken');
 const MockTokenRecipient = artifacts.require('MockTokenRecipient');
-const MockAddressBook = artifacts.require('MockAddressBook');
 
 contract('DivisionsToken', async accounts => {
     let minter = accounts[1];
     let divisionsToken;
     let tokenRecipient;
-    let addressBook;
 
     before(async () => {
-        addressBook = await MockAddressBook.new();
-
-        divisionsToken = await DivisionsToken.new(addressBook.address);
-        await addressBook.registerEntryOwner(divisionsToken.address, accounts[0]);
+        divisionsToken = await DivisionsToken.new();
 
         tokenRecipient = await MockTokenRecipient.new();
     });

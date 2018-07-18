@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../../../divisions/stake/StakeManager.sol";
 
@@ -6,9 +6,8 @@ import "./MockWithdrawalBox.sol";
 
 contract MockStakeManager is AStakeManager {
     
-    constructor(ACasper _casper, ATreasury _treasury, AAddressBook _addressBook) 
+    constructor(ACasper _casper, ATreasury _treasury)
     public
-    AddressBookEntry(_addressBook, "StakeManager")
     {
         casper = _casper;
         treasury = _treasury;

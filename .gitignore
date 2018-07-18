@@ -70,3 +70,6 @@ bin/
 
 # node generated files
 .node-xmlhttprequest*
+
+#configuration
+truffle-config-constants.json

@@ -1,11 +1,10 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../../../divisions/token/DivisionsToken.sol";
 
 contract MockDivisionsToken is ADivisionsToken {
 
-    constructor(AAddressBook _addressBook)
-    AddressBookEntry(_addressBook, "DivisionsToken")
+    constructor()
     public
     {
         symbol = "MOCK";

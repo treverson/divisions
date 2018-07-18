@@ -1,12 +1,11 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../../../divisions/stake/Treasury.sol";
 
 contract MockTreasury is ATreasury {
     uint256 private totalPoolSize_;
 
-    constructor(ACasper _casper, AAddressBook _addressBook)
-    AddressBookEntry(_addressBook, "Treasury")
+    constructor(ACasper _casper)
     public
     {
         casper = _casper;

@@ -1,11 +1,9 @@
-pragma solidity 0.4.23;
-
-import "./AddressBookEntry.sol";
+pragma solidity 0.4.24;
 
 import "../token/CallingToken.sol";
 import "../token/ITokenRecipient.sol";
 
-contract ATokenVault is AddressBookEntry, ITokenRecipient {
+contract ATokenVault is ITokenRecipient {
 
     uint256 public totalLocked;
     uint256 public totalLockedLastBlock;
@@ -31,13 +29,12 @@ contract TokenVault is ATokenVault {
 
     uint256 totalLockedLastUpdatedAt;
 
-    string private tokenName;
+    CallingToken public token;
 
-    constructor(AAddressBook _addressBook, string _tokenName)
-        AddressBookEntry(_addressBook, "TokenVault")
+    constructor(CallingToken _token)
         public
     {
-        tokenName = _tokenName;
+        token = _token;
     }
 
     function lockTokens(uint256 _amount) external {
@@ -46,7 +43,7 @@ contract TokenVault is ATokenVault {
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external payable {
         bytes(_extraData); // Suppress warning on unused variable
-        require(_token == address(getToken()), "Only accepts approvals from GovernanceToken");
+        require(_token == address(token), "Only accepts approvals from associated token");
         lockTokens(_value, _from);
     }
 
@@ -56,7 +53,7 @@ contract TokenVault is ATokenVault {
             totalLockedLastUpdatedAt = block.timestamp;
         }
 
-        getToken().transferFrom(_owner, address(this), _amount);
+        token.transferFrom(_owner, address(this), _amount);
         
         Locker storage locker = lockers[_owner];
         locker.amount = locker.amount.add(_amount);
@@ -81,12 +78,8 @@ contract TokenVault is ATokenVault {
 
         totalLocked = totalLocked.sub(_amount);
 
-        getToken().transfer(msg.sender, _amount);
+        token.transfer(msg.sender, _amount);
          
         emit TokensUnlocked(msg.sender, _amount);
-    }
-
-    function getToken() internal view returns (ACallingToken token){
-        return token = ACallingToken(getEntry(tokenName));
     }
 }

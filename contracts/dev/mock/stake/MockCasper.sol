@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../../../divisions/stake/ACasper.sol";
 /*  Mock Capser contract. Does not do decode RLP, 
@@ -8,12 +8,6 @@ import "../../../divisions/stake/ACasper.sol";
     Based on simple_casper.v.py: https://github.com/ethereum/casper/blob/master/casper/contracts/simple_casper.v.py    
 */
 contract MockCasper is ACasper {
-    bytes constant public invalid_vote_message = "thisvoteisinvalid";
-    bytes constant public invalid_logout_message = "thislogoutisinvalid";
-
-    bytes32 public invalid_vote_message_hash = keccak256(invalid_vote_message_hash);
-    bytes32 public invalid_logout_message_hash = keccak256(invalid_logout_message);
-
     bool rejectVote = false;
     bool rejectLogout = false;
 

@@ -1,6 +1,7 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
-import "../gov/AddressBook.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+
 import "../exchange/Exchange.sol";
 
 import "./ACasper.sol";
@@ -8,7 +9,7 @@ import "./StakeManager.sol";
 import "./WithdrawalBox.sol";
 
 
-contract ATreasury is AddressBookEntry {
+contract ATreasury is Ownable {
     AStakeManager public stakeManager;
     AExchange public exchange;
     ACasper public casper;
@@ -48,8 +49,7 @@ contract Treasury is ATreasury {
 
     TotalPoolSizeCache private poolSizeCache;
 
-    constructor(ACasper _casper, AAddressBook _addressBook)
-    AddressBookEntry(_addressBook, "Treasury")
+    constructor(ACasper _casper)
     public
     {
         casper = _casper;
@@ -80,6 +80,7 @@ contract Treasury is ATreasury {
 
     function transferToExchange(uint256 _amount) external onlyStakeManager {
         exchange.receiveEtherDeposit.value(_amount)();
+        
         emit Transfer(address(exchange), _amount);
     }
 
