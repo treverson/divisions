@@ -1,7 +1,6 @@
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
-let TransactionListener = require('../../test-helpers/TransactionListener');
-let transactionListener = new TransactionListener();
+
 let BigNumber = web3.__proto__.BigNumber;
 // ============ Test Exchange ============ //
 
@@ -42,11 +41,11 @@ contract('Exchange', async accounts => {
 
         exchange = await Exchange.new(
             divToken.address,
-            stakeManager.address, 
+            stakeManager.address,
             web3.toWei(0.01, "ether"),
             0.01e18
         );
-        
+
         await stakeManager.setExchange(exchange.address);
         await divToken.transferMintership(exchange.address);
         await treasury.setTotalPoolSize(0);
@@ -172,7 +171,7 @@ contract('Exchange', async accounts => {
 
     });
 
-    it('implements a mininum amount for orders', async ()=> {
+    it('implements a mininum amount for orders', async () => {
         let minBuyOrderAmount = web3.toBigNumber(0.1e18);
         let minSellOrderAmount = web3.toBigNumber(web3.toWei(0.1, 'ether'));
 
@@ -191,7 +190,7 @@ contract('Exchange', async accounts => {
         );
 
         await expectThrow(
-            exchange.placeBuyOrder({value: minBuyOrderAmount.sub(1)}),
+            exchange.placeBuyOrder({ value: minBuyOrderAmount.sub(1) }),
             "Cannot place buy orders with amount less than minBuyOrderAmount"
         );
 
@@ -201,7 +200,7 @@ contract('Exchange', async accounts => {
             exchange.placeSellOrder(minSellOrderAmount.sub(1)),
             "Cannot place sell order with amount less than minSellOrderAmount"
         );
-        
+
         await expectThrow(
             exchange.setMinBuyOrderAmount(0),
             "Cannot set the minimum buy order amount to 0"
@@ -213,19 +212,19 @@ contract('Exchange', async accounts => {
         );
 
         await expectThrow(
-            exchange.setMinBuyOrderAmount(web3.toWei(3, 'ether'), {from: accounts[1]}),
+            exchange.setMinBuyOrderAmount(web3.toWei(3, 'ether'), { from: accounts[1] }),
             "Only the owner can set the mininum buy order amount"
         );
 
         await expectThrow(
-            exchange.setMinSellOrderAmount(3e18, {from: accounts[1]}),
+            exchange.setMinSellOrderAmount(3e18, { from: accounts[1] }),
             "Only the owner can set the minimum sell order amount"
         );
 
         // Test that we can place orders with the minimum amounts without errors
-        await exchange.placeBuyOrder({value: minSellOrderAmount});
+        await exchange.placeBuyOrder({ value: minSellOrderAmount });
         await exchange.placeSellOrder(minSellOrderAmount);
-        
+
     })
 
     it('places sell orders on receiveApproval from divToken', async () => {
@@ -258,8 +257,8 @@ contract('Exchange', async accounts => {
 
         let buyer = accounts[2];
         await divToken.mint(seller, sellAmount);
-        await exchange.placeBuyOrder({from: buyer, value: await exchange.toWei(sellAmount.times(2))});
-    
+        await exchange.placeBuyOrder({ from: buyer, value: await exchange.toWei(sellAmount.times(2)) });
+
         await divToken.approveAndCall(exchange.address, sellAmount, '0xef0c7686', { from: seller });
         sellOrderIndexes = await exchange.getSellOrderIndexes(seller);
         sellOrderIndex = sellOrderIndexes[sellOrderIndexes.length - 1];
@@ -301,7 +300,7 @@ contract('Exchange', async accounts => {
         web3.toWei(10, 'ether')
     ];
     buyOrderAmounts.forEach(orderAmount => {
-        it('calculates the amount that can be filled of a buy order ', async () => {
+        it('calculates the amount that can be filled of a buy order', async () => {
             await treasury.setTotalPoolSize(web3.toWei(5, 'ether'));
 
             await divToken.mint(exchange.address, 5e18);
@@ -309,12 +308,12 @@ contract('Exchange', async accounts => {
             let divReserveInWei = await exchange.toWei(divReserve);
             let totalBuyAmountFilled = await exchange.totalBuyAmountFilled();
 
-            let out = await transactionListener.listen(
-                exchange.placeBuyOrder.sendTransaction({
+            let out = await expectEvent(
+                exchange.placeBuyOrder({
                     value: orderAmount,
                     from: accounts[5]
                 }),
-                exchange.BuyOrderPlaced()
+                exchange.BuyOrderPlaced
             );
 
             let buyOrder = new Order(await exchange.buyOrders(out.index));
@@ -341,7 +340,6 @@ contract('Exchange', async accounts => {
                 "The fillable amount was not correct"
             );
 
-            transactionListener.dispose();
         });
     });
 
@@ -360,14 +358,14 @@ contract('Exchange', async accounts => {
 
             await divToken.mint(accounts[1], orderAmount);
 
-            let out = await transactionListener.listen(
-                divToken.approveAndCall.sendTransaction(
+            let out = await expectEvent(
+                divToken.approveAndCall(
                     exchange.address,
                     orderAmount,
                     "",
                     { from: accounts[1] }
                 ),
-                exchange.SellOrderPlaced()
+                exchange.SellOrderPlaced
             );
 
             let sellOrder = new Order(await exchange.sellOrders(out.index));
@@ -394,7 +392,6 @@ contract('Exchange', async accounts => {
                 "The fillable amount was not correct"
             );
 
-            transactionListener.dispose();
         });
     });
 
@@ -403,29 +400,21 @@ contract('Exchange', async accounts => {
         let sellAmount = 100e18;
         await divToken.mint(seller, sellAmount);
         await divToken.approve(exchange.address, sellAmount, { from: seller });
-        let sellOrderIndex;
-        try {
-            sellOrderIndex = (await transactionListener.listen(
-                exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
-                exchange.SellOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+
+        let sellOrderIndex = (await expectEvent(
+            exchange.placeSellOrder(sellAmount, { from: seller }),
+            exchange.SellOrderPlaced
+        )).index;
+
         let buyer = accounts[1];
         let buyAmount = web3.toBigNumber(web3.toWei(4, 'ether'));
 
         let totalBuyAmountFilledBefore = await exchange.totalBuyAmountFilled();
         let totalSellAmountFilledBefore = await exchange.totalSellAmountFilled();
-        let buyOrderIndex
-        try {
-            buyOrderIndex = (await transactionListener.listen(
-                exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
-                exchange.BuyOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+        let buyOrderIndex = (await expectEvent(
+            exchange.placeBuyOrder({ value: buyAmount, from: buyer }),
+            exchange.BuyOrderPlaced
+        )).index;
 
         let buyerBalanceBefore = await divToken.balanceOf(buyer);
 
@@ -475,15 +464,11 @@ contract('Exchange', async accounts => {
 
         let buyer = accounts[1]
         let buyAmount = web3.toBigNumber(web3.toWei(4, 'ether'));
-        let buyOrderIndex;
-        try {
-            buyOrderIndex = (await transactionListener.listen(
-                exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
-                exchange.BuyOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+
+        let buyOrderIndex = (await expectEvent(
+            exchange.placeBuyOrder({ value: buyAmount, from: buyer }),
+            exchange.BuyOrderPlaced
+        )).index;
 
         await expectEvent(
             exchange.fillBuyOrder(buyOrderIndex),
@@ -495,16 +480,11 @@ contract('Exchange', async accounts => {
     it('fills sell orders', async () => {
         let buyer = accounts[2]
         let buyAmount = web3.toWei(20, 'ether');
-        let buyOrderIndex;
+        let buyOrderIndex = (await expectEvent(
+            exchange.placeBuyOrder({ value: buyAmount, fom: buyer }),
+            exchange.BuyOrderPlaced
+        )).index;
 
-        try {
-            buyOrderIndex = (await transactionListener.listen(
-                exchange.placeBuyOrder.sendTransaction({ value: buyAmount, from: buyer }),
-                exchange.BuyOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
 
         let seller = accounts[1];
         let sellAmount = web3.toBigNumber(1e18);
@@ -514,15 +494,10 @@ contract('Exchange', async accounts => {
         let totalSellAmountFilledBefore = await exchange.totalSellAmountFilled();
         let totalBuyAmountFilledBefore = await exchange.totalBuyAmountFilled();
 
-        let sellOrderIndex;
-        try {
-            sellOrderIndex = (await transactionListener.listen(
-                exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
-                exchange.SellOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+        let sellOrderIndex = (await expectEvent(
+            exchange.placeSellOrder(sellAmount, { from: seller }),
+            exchange.SellOrderPlaced
+        )).index;
 
         let sellerPaymentsBefore = await exchange.payments(seller);
 
@@ -572,15 +547,10 @@ contract('Exchange', async accounts => {
         await divToken.mint(seller, sellAmount);
         await divToken.approve(exchange.address, sellAmount, { from: seller });
 
-        let sellOrderIndex;
-        try {
-            sellOrderIndex = (await transactionListener.listen(
-                exchange.placeSellOrder.sendTransaction(sellAmount, { from: seller }),
-                exchange.SellOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
+        let sellOrderIndex = (await expectEvent(
+            exchange.placeSellOrder(sellAmount, { from: seller }),
+            exchange.SellOrderPlaced
+        )).index;
 
         await expectEvent(
             exchange.fillSellOrder(sellOrderIndex),
@@ -596,23 +566,17 @@ contract('Exchange', async accounts => {
         let sellAmount = await exchange.toDiv(buyAmount);
         await divToken.mint(seller, sellAmount);
 
-        let sellOrderIndex;
-        let buyOrderIndex;
-        try {
-           sellOrderIndex =  (await transactionListener.listen(
-               divToken.approveAndCall.sendTransaction(exchange.address, sellAmount, '', { from: seller }),
-               exchange.SellOrderPlaced()
-            )).index;
-       
-       
-            buyOrderIndex = (await transactionListener.listen(
-                exchange.placeAndFillBuyOrder.sendTransaction({from: buyer, value: buyAmount}),
-                exchange.BuyOrderPlaced()
-            )).index;
-        } finally {
-            transactionListener.dispose();
-        }
-        
+        let sellOrderIndex = (await expectEvent(
+            divToken.approveAndCall(exchange.address, sellAmount, '', { from: seller }),
+            exchange.SellOrderPlaced
+        )).index;
+
+
+        let buyOrderIndex = (await expectEvent(
+            exchange.placeAndFillBuyOrder({ from: buyer, value: buyAmount }),
+            exchange.BuyOrderPlaced
+        )).index;
+
 
         let buyOrder = new Order(await exchange.buyOrders(buyOrderIndex));
         let sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
@@ -649,32 +613,27 @@ contract('Exchange', async accounts => {
         let sellAmount = web3.toBigNumber(3e18);
         let seller = accounts[1];
         await divToken.mint(seller, sellAmount);
-        
+
         let buyer = accounts[2];
         let buyAmount = await exchange.toWei(sellAmount);
-        
 
-        let buyOrderIndex;
-        let sellOrderIndex;
-        try {
-            buyOrderIndex = (await transactionListener.listen(
-                exchange.placeBuyOrder.sendTransaction({from: buyer, value: buyAmount}),
-                exchange.BuyOrderPlaced()
-            )).index;
-            sellOrderIndex =  (await transactionListener.listen(
-                divToken.approveAndCall.sendTransaction(exchange.address, sellAmount, '0xef0c7686', { from: seller }),
-                exchange.SellOrderPlaced()
-             )).index;
-        } finally {
-            transactionListener.dispose();
-        }
-        
+        let buyOrderIndex = (await expectEvent(
+            exchange.placeBuyOrder({ from: buyer, value: buyAmount }),
+            exchange.BuyOrderPlaced
+        )).index;
+
+        let sellOrderIndex = (await expectEvent(
+            divToken.approveAndCall(exchange.address, sellAmount, '0xef0c7686', { from: seller }),
+            exchange.SellOrderPlaced
+        )).index;
+
+
         let sellOrder = new Order(await exchange.sellOrders(sellOrderIndex));
         let buyOrder = new Order(await exchange.buyOrders(buyOrderIndex));
-        
+
         delete sellOrder.cumulativeAmount;
         delete buyOrder.cumulativeAmount;
-       
+
         assert.deepEqual(
             sellOrder,
             {
@@ -705,19 +664,15 @@ contract('Exchange', async accounts => {
     it('cancels buy orders', async () => {
         let orderIndexes = [];
         let buyAmount = web3.toBigNumber(web3.toWei(0.5, 'ether'));
-        try {
-            for (let i = 0; i < 10; i++) {
-                let account = accounts[i % 5 + 5];
-                orderIndexes.push(
-                    (await transactionListener.listen(
-                        exchange.placeBuyOrder
-                            .sendTransaction({ value: buyAmount, from: account }),
-                        exchange.BuyOrderPlaced()
-                    )).index
-                );
-            }
-        } finally {
-            transactionListener.dispose();
+
+        for (let i = 0; i < 10; i++) {
+            let account = accounts[i % 5 + 5];
+            orderIndexes.push(
+                (await expectEvent(
+                    exchange.placeBuyOrder({ value: buyAmount, from: account }),
+                    exchange.BuyOrderPlaced
+                )).index
+            );
         }
 
         await expectThrow(
@@ -739,7 +694,7 @@ contract('Exchange', async accounts => {
                 order.amount,
                 "The order was not canceled"
             );
-            
+
             assert(order.finished, "The order was not finished");
 
             assert.deepEqual(
@@ -755,22 +710,19 @@ contract('Exchange', async accounts => {
     it('cancels sell orders', async () => {
         let orderIndexes = [];
         let sellAmount = web3.toBigNumber(0.5e18);
-        try {
-            for (let i = 0; i < 10; i++) {
-                let account = accounts[i % 5 + 5];
-                await divToken.mint(account, sellAmount);
-                
-                orderIndexes.push(
-                    (await transactionListener.listen(
-                        divToken.approveAndCall.sendTransaction(
-                            exchange.address, sellAmount, "", { from: account }
-                        ),
-                        exchange.SellOrderPlaced()
-                    )).index
-                );
-            }
-        } finally {
-            transactionListener.dispose();
+
+        for (let i = 0; i < 10; i++) {
+            let account = accounts[i % 5 + 5];
+            await divToken.mint(account, sellAmount);
+
+            orderIndexes.push(
+                (await expectEvent(
+                    divToken.approveAndCall(
+                        exchange.address, sellAmount, "", { from: account }
+                    ),
+                    exchange.SellOrderPlaced
+                )).index
+            );
         }
 
         await expectThrow(
@@ -905,19 +857,17 @@ contract('Exchange', async accounts => {
         let orderIndexes = [];
         let buyAmount = web3.toBigNumber(web3.toWei(0.5, 'ether'));
         let totalBuyAmount = web3.toBigNumber(0);
-        try {
-            for (let i = 0; i < 10; i++) {
-                totalBuyAmount = totalBuyAmount.add(buyAmount);
-                orderIndexes.push(
-                    (await transactionListener.listen(
-                        exchange.placeBuyOrder
-                            .sendTransaction({ value: buyAmount, from: accounts[i % 5 + 5] }),
-                        exchange.BuyOrderPlaced()
-                    )).index
-                );
-            }
-        } finally {
-            transactionListener.dispose();
+
+        for (let i = 0; i < 10; i++) {
+            totalBuyAmount = totalBuyAmount.add(buyAmount);
+            orderIndexes.push(
+                (await expectEvent(
+                    exchange.placeBuyOrder(
+                        { value: buyAmount, from: accounts[i % 5 + 5] }
+                    ),
+                    exchange.BuyOrderPlaced
+                )).index
+            );
         }
 
         await expectThrow(
@@ -957,22 +907,20 @@ contract('Exchange', async accounts => {
         let sellAmount = web3.toBigNumber(0.5e18);
         let sellAmountInWei = await exchange.toWei(sellAmount);
         let totalSellAmount = web3.toBigNumber(0);
-        try {
-            for (let i = 0; i < 10; i++) {
-                totalSellAmount = totalSellAmount.add(sellAmount);
-                let seller = accounts[i % 5 + 5];
-                await divToken.mint(seller, sellAmount);
-                orderIndexes.push(
-                    (await transactionListener.listen(
-                        divToken.approveAndCall
-                            .sendTransaction(exchange.address, sellAmount, "", { from: seller }),
-                        exchange.SellOrderPlaced()
-                    )).index
-                );
-                await web3.eth.sendTransaction({ from: seller, to: accounts[0], value: sellAmountInWei });
-            }
-        } finally {
-            transactionListener.dispose();
+
+        for (let i = 0; i < 10; i++) {
+            totalSellAmount = totalSellAmount.add(sellAmount);
+            let seller = accounts[i % 5 + 5];
+            await divToken.mint(seller, sellAmount);
+            orderIndexes.push(
+                (await expectEvent(
+                    divToken.approveAndCall(
+                        exchange.address, sellAmount, "", { from: seller }
+                    ),
+                    exchange.SellOrderPlaced
+                )).index
+            );
+            await web3.eth.sendTransaction({ from: seller, to: accounts[0], value: sellAmountInWei });
         }
 
         let totalDivSupplyBefore = await divToken.totalSupply();

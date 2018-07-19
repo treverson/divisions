@@ -1,7 +1,5 @@
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
-let TransactionListener = require('../../test-helpers/TransactionListener');
-let transactionListener = new TransactionListener();
 
 // ============ Test GovernanceToken ============ //
 

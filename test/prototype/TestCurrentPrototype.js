@@ -2,9 +2,6 @@ const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 const timeout = require('../../test-helpers/timeout');
 
-let TransactionListener = require('../../test-helpers/TransactionListener');
-let transactionListener = new TransactionListener();
-
 // ============ Test Prototype 2 ============ //
 
 const path = require('path');

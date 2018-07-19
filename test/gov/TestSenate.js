@@ -1,7 +1,6 @@
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
-let TransactionListener = require('../../test-helpers/TransactionListener');
-let transactionListener = new TransactionListener();
+
 const timeout = require('../../test-helpers/timeout');
 
 // ============ Test Senate ============ //
@@ -33,10 +32,6 @@ contract('Senate', async accounts => {
             tokenVault.address
         );
     });
-
-    after(() => {
-        transactionListener.dispose();
-    })
 
     it('makes proposals', async () => {
         let target = accounts[6];
@@ -106,14 +101,14 @@ contract('Senate', async accounts => {
         let value = web3.toBigNumber(web3.toWei(2, 'ether'));
         let description = "This is a description";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, data, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
-        let voteIndex = (await transactionListener.listen(
-            senate.vote.sendTransaction(proposalIndex, true),
-            senate.Voted()
+        let voteIndex = (await expectEvent(
+            senate.vote(proposalIndex, true),
+            senate.Voted
         )).voteIndex;
 
         let vote = new Vote(await senate.votes(proposalIndex, voteIndex));
@@ -166,14 +161,14 @@ contract('Senate', async accounts => {
         let value = web3.toBigNumber(web3.toWei(2, 'ether'));
         let description = "This is a description";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, data, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
-        let expectedVoteIndex = (await transactionListener.listen(
-            senate.vote.sendTransaction(proposalIndex, true),
-            senate.Voted()
+        let expectedVoteIndex = (await expectEvent(
+            senate.vote(proposalIndex, true),
+            senate.Voted
         )).voteIndex;
 
         let actualVoteIndex = await senate.voteIndexes(proposalIndex, accounts[0]);
@@ -196,9 +191,9 @@ contract('Senate', async accounts => {
         let value = web3.toBigNumber(web3.toWei(2, 'ether'));
         let description = "This is a description";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, data, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         await timeout.resolve((DEBATING_PERIOD_SECS + 3) * 1000);
@@ -220,9 +215,9 @@ contract('Senate', async accounts => {
         let value = web3.toBigNumber(web3.toWei(2, 'ether'));
         let description = "This is a description";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, data, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         await expectEvent(
@@ -254,9 +249,9 @@ contract('Senate', async accounts => {
         let value = 0;
         let description = "subject.setValue(123)";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, calldataHash, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         await senate.vote(proposalIndex, true);
@@ -291,9 +286,9 @@ contract('Senate', async accounts => {
             "A proposal can only be executed once"
         );
 
-        proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
-            senate.ProposalMade()
+        proposalIndex = (await expectEvent(
+            senate.makeProposal(target, calldataHash, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         await timeout.resolve((DEBATING_PERIOD_SECS + 2) * 1000);
@@ -319,9 +314,9 @@ contract('Senate', async accounts => {
         let value = 0;
         let description = "subject.setValue(123)";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, calldataHash, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         await senate.vote(proposalIndex, true);
@@ -358,9 +353,9 @@ contract('Senate', async accounts => {
         let value = 0;
         let description = "senate.changeVotingRules(100, 0.1e18);";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, calldataHash, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         await senate.vote(proposalIndex, true);
@@ -407,9 +402,9 @@ contract('Senate', async accounts => {
         let value = 0;
         let description = "senate.changeVotingRules(100, 0.1e18);";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, calldataHash, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         await senate.vote(proposalIndex, true);
@@ -438,9 +433,9 @@ contract('Senate', async accounts => {
         let value = web3.toBigNumber(web3.toWei(2, 'ether'));
         let description = "This is a description";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, data, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         assert(!await senate.proposalPassed(proposalIndex),
@@ -481,9 +476,9 @@ contract('Senate', async accounts => {
         let value = web3.toBigNumber(web3.toWei(2, 'ether'));
         let description = "This is a description";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, data, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, data, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
 
         assert(!await senate.proposalDebatingPeriodEnded(proposalIndex),
@@ -516,11 +511,10 @@ contract('Senate', async accounts => {
         let value = 0;
         let description = "senate.setPresident(" + accounts[9] + ");";
 
-        let proposalIndex = (await transactionListener.listen(
-            senate.makeProposal.sendTransaction(target, calldataHash, value, description, { from: president }),
-            senate.ProposalMade()
+        let proposalIndex = (await expectEvent(
+            senate.makeProposal(target, calldataHash, value, description, { from: president }),
+            senate.ProposalMade
         )).index;
-
 
         await senate.vote(proposalIndex, true);
 
