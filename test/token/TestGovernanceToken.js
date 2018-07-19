@@ -27,19 +27,20 @@ contract('GovernanceToken', async accounts => {
     });
 
     it('approves and calls', async () => {
-        let approvedAmount = 10 ** 18;
+        let approvedAmount = web3.toBigNumber(10 ** 18);
         let data = web3.toHex("This is data");
         
         let allowanceBefore = await govToken.allowance(accounts[0], tokenRecipient.address);
 
         await expectEvent(
-            govToken.approveAndCall.sendTransaction(
+            govToken.approveAndCall(
                 tokenRecipient.address, approvedAmount, data
             ),
-            tokenRecipient.ReceiveApprovalCalled(),
+            tokenRecipient.ReceiveApprovalCalled,
             {
                 from: accounts[0],
                 value: approvedAmount,
+                msgValue: web3.toBigNumber(0),
                 token: govToken.address,
                 extraData: data
             }

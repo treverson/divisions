@@ -32,8 +32,12 @@ contract('Treasury', async accounts => {
     });
 
     beforeEach(async () => {
-        await treasury.setStakeManager(stakeManager);
-        await treasury.setExchange(exchange.address);
+        try {
+            await treasury.setStakeManager(stakeManager);
+            await treasury.setExchange(exchange.address);
+        } catch (err) {
+            console.err(err);
+        }
     })
 
     it('sets the StakeManager', async () => {
@@ -56,8 +60,8 @@ contract('Treasury', async accounts => {
         let oldStakeManager = await treasury.stakeManager();
         let newStakeManager = accounts[6];
         await expectEvent(
-            treasury.setStakeManager.sendTransaction(newStakeManager),
-            treasury.StakeManagerSet(),
+            treasury.setStakeManager(newStakeManager),
+            treasury.StakeManagerSet,
             { previousStakeManager: oldStakeManager, newStakeManager: newStakeManager },
         );
     });
@@ -90,9 +94,9 @@ contract('Treasury', async accounts => {
 
         let recipient = accounts[0];
 
-        expectEvent(
-            treasury.transfer.sendTransaction(recipient, transferredWei, { from: stakeManager }),
-            treasury.Transfer(),
+        await expectEvent(
+            treasury.transfer(recipient, transferredWei, { from: stakeManager }),
+            treasury.Transfer,
             { to: recipient, amount: transferredWei }
         );
     });
@@ -121,10 +125,10 @@ contract('Treasury', async accounts => {
         let oldExchange = await treasury.exchange();
 
         await expectEvent(
-            treasury.setExchange.sendTransaction(newExchange),
-            treasury.ExchangeSet(),
+            treasury.setExchange(newExchange),
+            treasury.ExchangeSet,
             {
-                previousExchange: oldExchange.exchange,
+                previousExchange: oldExchange,
                 newExchange: newExchange
             }
         );
@@ -143,8 +147,8 @@ contract('Treasury', async accounts => {
         );
 
         await expectEvent(
-            treasury.transferToExchange.sendTransaction(sentEther, { from: stakeManager }),
-            exchange.ReceiveEtherDepositCalled(),
+            treasury.transferToExchange(sentEther, { from: stakeManager }),
+            exchange.ReceiveEtherDepositCalled,
             { value: sentEther }
         );
     });
@@ -157,8 +161,8 @@ contract('Treasury', async accounts => {
         await treasury.deposit({ value: sentEther, from: accounts[5] });
 
         await expectEvent(
-            treasury.transferToExchange.sendTransaction(sentEther, { from: stakeManager }),
-            treasury.Transfer(),
+            treasury.transferToExchange(sentEther, { from: stakeManager }),
+            treasury.Transfer,
             { to: exchange.address, amount: sentEther }
         );
     });
@@ -167,8 +171,8 @@ contract('Treasury', async accounts => {
         let investedWei = web3.toBigNumber(web3.toWei(3, 'ether'));
 
         await expectEvent(
-            treasury.deposit.sendTransaction({ value: investedWei }),
-            treasury.Deposit(),
+            treasury.deposit({ value: investedWei }),
+            treasury.Deposit,
             { from: accounts[0], amount: investedWei },
         );
 
@@ -185,13 +189,13 @@ contract('Treasury', async accounts => {
         let startDynasty = (await casper.dynasty()).plus(2);
 
         await expectEvent(
-            treasury.stake.sendTransaction(
+            treasury.stake(
                 stakedWei,
                 validatorAddress,
                 withdrawalBox.address,
                 { from: stakeManager }
             ),
-            casper.Deposit(),
+            casper.Deposit,
             {
                 _from: treasury.address,
                 _validator_index: nextValidatorIndex,
@@ -217,8 +221,8 @@ contract('Treasury', async accounts => {
         let withdrawalBox = await MockWithdrawalBox.new();
 
         await expectEvent(
-            treasury.stake.sendTransaction(stakedWei, validatorAddress, withdrawalBox.address, { from: stakeManager }),
-            treasury.Stake(),
+            treasury.stake(stakedWei, validatorAddress, withdrawalBox.address, { from: stakeManager }),
+            treasury.Stake,
             {
                 validatorAddress: validatorAddress,
                 withdrawalBox: withdrawalBox.address,
@@ -244,9 +248,9 @@ contract('Treasury', async accounts => {
         );
 
         await expectEvent(
-            treasury.sweep.sendTransaction(withdrawalBox.address),
-            treasury.Sweep(),
-            { withdrawalBox: withdrawalBox }
+            treasury.sweep(withdrawalBox.address),
+            treasury.Sweep,
+            { withdrawalBox: withdrawalBox.address }
         );
 
     });
@@ -262,8 +266,8 @@ contract('Treasury', async accounts => {
             await stakeManager.makeStakeDeposit();
             if (i % 4 == 0) {
                 let out = await expectEvent(
-                    casper.doLogout.sendTransaction(nextValidatorIndex, 0),
-                    casper.Logout()
+                    casper.doLogout(nextValidatorIndex, 0),
+                    casper.Logout
                 );
                 await casper.increment_dynasty();
             }

@@ -82,7 +82,7 @@ contract('TokenVault', async accounts => {
 
         await expectEvent(
             tokenVault.lockTokens(lockAmount),
-            tokenVault.TokensLocked(),
+            tokenVault.TokensLocked,
             { owner: accounts[0], amount: lockAmount }
         );
     });
@@ -129,7 +129,7 @@ contract('TokenVault', async accounts => {
 
         await expectEvent(
             tokenVault.unlockTokens(lockAmount),
-            tokenVault.TokensUnlocked(),
+            tokenVault.TokensUnlocked,
             {
                 owner: accounts[0],
                 amount: lockAmount

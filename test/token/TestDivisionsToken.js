@@ -65,8 +65,8 @@ contract('DivisionsToken', async accounts => {
         let recipient = accounts[2];
 
         await expectEvent(
-            divisionsToken.mint.sendTransaction(recipient, mintedAmount, { from: minter }),
-            divisionsToken.Mint(),
+            divisionsToken.mint(recipient, mintedAmount, { from: minter }),
+            divisionsToken.Mint,
             { recipient: recipient, amount: mintedAmount }
         );
     });
@@ -120,8 +120,8 @@ contract('DivisionsToken', async accounts => {
         await divisionsToken.mint(minter, burnedAmount, { from: minter });
 
         await expectEvent(
-            divisionsToken.burn.sendTransaction(burnedAmount, { from: minter }),
-            divisionsToken.Burn(),
+            divisionsToken.burn(burnedAmount, { from: minter }),
+            divisionsToken.Burn,
             { amount: burnedAmount }
         );
     });
@@ -148,27 +148,28 @@ contract('DivisionsToken', async accounts => {
         let newMinter = accounts[2];
 
         await expectEvent(
-            divisionsToken.transferMintership.sendTransaction(newMinter),
-            divisionsToken.MintershipTransferred(),
+            divisionsToken.transferMintership(newMinter),
+            divisionsToken.MintershipTransferred,
             { oldMinter: minter, newMinter: newMinter }
         );
     });
 
     it('approves and calls', async () => {
-        let approvedAmount = 10 ** 18;
+        let approvedAmount = web3.toBigNumber(10 ** 18);
         let data = web3.toHex("This is data");
         await divisionsToken.mint(accounts[0], approvedAmount, {from: minter});
         
         let allowanceBefore = await divisionsToken.allowance(accounts[0], tokenRecipient.address);
 
         await expectEvent(
-            divisionsToken.approveAndCall.sendTransaction(
+            divisionsToken.approveAndCall(
                 tokenRecipient.address, approvedAmount, data
             ),
-            tokenRecipient.ReceiveApprovalCalled(),
+            tokenRecipient.ReceiveApprovalCalled,
             {
                 from: accounts[0],
                 value: approvedAmount,
+                msgValue: web3.toBigNumber(0),
                 token: divisionsToken.address,
                 extraData: data
             }

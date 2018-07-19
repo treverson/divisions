@@ -124,7 +124,7 @@ contract('Exchange', async accounts => {
 
         await expectEvent(
             exchange.placeBuyOrder({ from: buyer, value: buyAmount }),
-            exchange.BuyOrderPlaced(),
+            exchange.BuyOrderPlaced,
             { index: buyOrdersLength, sender: buyer, amount: buyAmount }
         );
     });
@@ -291,7 +291,7 @@ contract('Exchange', async accounts => {
 
         await expectEvent(
             exchange.placeSellOrder(sellAmount, { from: seller }),
-            exchange.SellOrderPlaced(),
+            exchange.SellOrderPlaced,
             { index: sellOrdersLength, sender: seller, amount: sellAmount }
         );
     });
@@ -487,7 +487,7 @@ contract('Exchange', async accounts => {
 
         await expectEvent(
             exchange.fillBuyOrder(buyOrderIndex),
-            exchange.BuyOrderFilled(),
+            exchange.BuyOrderFilled,
             { index: buyOrderIndex, amountFilled: buyAmount }
         );
     });
@@ -584,7 +584,7 @@ contract('Exchange', async accounts => {
 
         await expectEvent(
             exchange.fillSellOrder(sellOrderIndex),
-            exchange.SellOrderFilled(),
+            exchange.SellOrderFilled,
             { index: sellOrderIndex, amountFilled: sellAmount }
         );
     });
@@ -730,7 +730,7 @@ contract('Exchange', async accounts => {
             let accountPaymentsBefore = await exchange.payments(account);
             await expectEvent(
                 exchange.cancelBuyOrder(orderIndexes[i], { from: account }),
-                exchange.BuyOrderCanceled(),
+                exchange.BuyOrderCanceled,
                 { index: orderIndexes[i] }
             );
             let order = new Order(await exchange.buyOrders(orderIndexes[i]));
@@ -783,7 +783,7 @@ contract('Exchange', async accounts => {
             let accountBalanceBefore = await divToken.balanceOf(account);
             await expectEvent(
                 exchange.cancelSellOrder(orderIndexes[i], { from: account }),
-                exchange.SellOrderCanceled(),
+                exchange.SellOrderCanceled,
                 { index: orderIndexes[i] }
             );
             let order = new Order(await exchange.sellOrders(orderIndexes[i]));
@@ -930,7 +930,7 @@ contract('Exchange', async accounts => {
 
         await expectEvent(
             stakeManager.simulateFillTreasury(totalBuyAmount),
-            treasury.DepositCalled(),
+            treasury.DepositCalled,
             { from: exchange.address, value: totalBuyAmount }
         );
 

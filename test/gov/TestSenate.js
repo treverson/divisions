@@ -90,7 +90,7 @@ contract('Senate', async accounts => {
 
         await expectEvent(
             senate.makeProposal(target, data, value, description, { from: president }),
-            senate.ProposalMade(),
+            senate.ProposalMade,
             { index: proposalsLengthBefore }
         );
     });
@@ -227,7 +227,7 @@ contract('Senate', async accounts => {
 
         await expectEvent(
             senate.vote(proposalIndex, true),
-            senate.Voted(),
+            senate.Voted,
             {
                 proposalIndex: proposalIndex,
                 voteIndex: '@any',
@@ -276,7 +276,7 @@ contract('Senate', async accounts => {
 
         await expectEvent(
             senate.executeProposal(proposalIndex, calldata),
-            subject.ValueSet(),
+            subject.ValueSet,
             {
                 value: web3.toBigNumber(123)
             }
@@ -330,7 +330,7 @@ contract('Senate', async accounts => {
 
         await expectEvent(
             senate.executeProposal(proposalIndex, calldata),
-            senate.ProposalExecuted(),
+            senate.ProposalExecuted,
             { index: proposalIndex }
         );
 
@@ -418,7 +418,7 @@ contract('Senate', async accounts => {
 
         await expectEvent(
             senate.executeProposal(proposalIndex, calldata),
-            senate.VotingRulesChanged()
+            senate.VotingRulesChanged
         );
     });
 
@@ -546,7 +546,7 @@ contract('Senate', async accounts => {
     it('logs an event on setPresident', async () => {
         await expectEvent(
             senate.setPresident(accounts[1], {from: president}),
-            senate.PresidentSet(),
+            senate.PresidentSet,
             {
                 previousPresident: president,
                 newPresident: accounts[1]

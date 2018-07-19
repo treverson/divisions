@@ -9,7 +9,7 @@ const MockTreasury = artifacts.require('MockTreasury');
 const MockCasper = artifacts.require('MockCasper');
 const MockExchange = artifacts.require('MockExchange');
 
-const MIN_DEPOSIT_SIZE = web3.toWei(20, 'ether');
+const MIN_DEPOSIT_SIZE = web3.toWei(5, 'ether');
 const EPOCH_LENGTH = 20;
 const EPOCHS_BEFORE_LOGOUT = 10;
 const DYNASTY_LOGOUT_DELAY = 0;
@@ -80,7 +80,7 @@ contract('StakeManager', async accounts => {
 
         await expectEvent(
             stakeManager.transferValidatorship(newValidator),
-            stakeManager.ValidatorshipTransferred(),
+            stakeManager.ValidatorshipTransferred,
             { oldValidator: oldValidator, newValidator: newValidator }
         );
     });
@@ -106,7 +106,7 @@ contract('StakeManager', async accounts => {
 
         await expectEvent(
             stakeManager.setTreasury(newTreasury),
-            stakeManager.TreasurySet(),
+            stakeManager.TreasurySet,
             { oldTreasury: oldTreasury, newTreasury: newTreasury }
         );
     });
@@ -154,7 +154,7 @@ contract('StakeManager', async accounts => {
 
         await expectEvent(
             stakeManager.makeStakeDeposit(),
-            treasury.StakeCalled(),
+            treasury.StakeCalled,
             {
                 amount: stakeAmount,
                 validatorAddress: validator,
@@ -178,7 +178,7 @@ contract('StakeManager', async accounts => {
 
         await expectEvent(
             stakeManager.makeStakeDeposit(),
-            exchange.TransferWeiToTreasuryCalled(),
+            exchange.TransferWeiToTreasuryCalled,
             { amount: web3.toBigNumber(web3.toWei(10, 'ether')) }
         );
     });
@@ -191,7 +191,7 @@ contract('StakeManager', async accounts => {
 
         await expectEvent(
             stakeManager.refillExchange(),
-            treasury.TransferToExchangeCalled(),
+            treasury.TransferToExchangeCalled,
             { amount: refillSize }
         )
     });
@@ -203,7 +203,7 @@ contract('StakeManager', async accounts => {
 
         await expectEvent(
             stakeManager.makeStakeDeposit(),
-            stakeManager.WithdrawalBoxDeployed(),
+            stakeManager.WithdrawalBoxDeployed,
             {
                 withdrawalBox: '@any',
             }
@@ -234,7 +234,7 @@ contract('StakeManager', async accounts => {
                 sourceEpoch,
                 { from: validator }
             ),
-            casper.VoteCalled(),
+            casper.VoteCalled,
             { vote_msg: web3.fromAscii(messageRLP) }
         );
 
@@ -334,7 +334,7 @@ contract('StakeManager', async accounts => {
         let sourceEpoch = 101;
 
         await expectEvent(
-            stakeManager.vote.sendTransaction(
+            stakeManager.vote(
                 messageRLP,
                 validatorIndex,
                 targetHash,
@@ -342,7 +342,7 @@ contract('StakeManager', async accounts => {
                 sourceEpoch,
                 { from: validator }
             ),
-            stakeManager.VoteCast(),
+            stakeManager.VoteCast,
             {
                 messageRLP: web3.toHex(messageRLP),
                 validatorIndex: web3.toBigNumber(validatorIndex),
@@ -366,13 +366,13 @@ contract('StakeManager', async accounts => {
         let epoch = web3.toBigNumber(100);
 
         await expectEvent(
-            stakeManager.logout.sendTransaction(
+            stakeManager.logout(
                 withdrawalBoxAddress,
                 logoutMessageRLP,
                 validatorIndex,
                 epoch
             ),
-            casper.LogoutCalled(),
+            casper.LogoutCalled,
             {
                 logout_msg: logoutMessageRLP
             }
@@ -429,13 +429,13 @@ contract('StakeManager', async accounts => {
         let epoch = web3.toBigNumber(100);
 
         await expectEvent(
-            stakeManager.logout.sendTransaction(
+            stakeManager.logout(
                 withdrawalBoxAddress,
                 logoutMessageRLP,
                 validatorIndex,
                 epoch
             ),
-            stakeManager.Logout(),
+            stakeManager.Logout,
             {
                 withdrawalBox: withdrawalBoxAddress,
                 messageRLP: logoutMessageRLP,
@@ -470,8 +470,8 @@ contract('StakeManager', async accounts => {
         let oldExchange = await stakeManager.exchange();
 
         await expectEvent(
-            stakeManager.setExchange.sendTransaction(newExchange),
-            stakeManager.ExchangeSet(),
+            stakeManager.setExchange(newExchange),
+            stakeManager.ExchangeSet,
             {
                 oldExchange: oldExchange,
                 newExchange: newExchange

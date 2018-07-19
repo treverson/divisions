@@ -1,5 +1,7 @@
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
+const timeout = require('../../test-helpers/timeout');
+
 let TransactionListener = require('../../test-helpers/TransactionListener');
 let transactionListener = new TransactionListener();
 
@@ -33,6 +35,7 @@ contract('Prototype 2', async accounts => {
     let govToken;
 
     before(async () => {
+        await timeout.resolve(1000);
         validator = accounts[0];
         president = accounts[0];
 
@@ -45,17 +48,17 @@ contract('Prototype 2', async accounts => {
         senate = await Senate.deployed();
         tokenVault = await TokenVault.deployed();
     });
-
-    it('Completes a staking cycle', async () => {
+for(let i = 0; i < 10; i++)
+    it('Completes a staking cycle ' + i, async () => {
         // Place buy order
         await exchange.placeBuyOrder({ value: web3.toWei(1, 'ether') });
 
         // Deposit
         let stakeAmount = await stakeManager.getStakeableAmount();
-        console.log(casper.address);
+
         let out = await expectEvent(
             stakeManager.makeStakeDeposit(),
-            casper.DepositCalled(),
+            casper.DepositCalled,
             {
                 validation_addr: validator,
                 withdrawal_addr: '@any',
@@ -83,7 +86,7 @@ contract('Prototype 2', async accounts => {
                 sourceEpoch,
                 { from: validator }
             ),
-            casper.VoteCalled(),
+            casper.VoteCalled,
             { vote_msg: vote }
         );
 
@@ -98,14 +101,14 @@ contract('Prototype 2', async accounts => {
         // Withdraw
         await expectEvent(
             casper.withdraw(validatorIndex),
-            withdrawalBox.EtherReceived(),
+            withdrawalBox.EtherReceived,
             { amount: stakeAmount }
         );
 
         // Sweep
         await expectEvent(
             treasury.sweep(withdrawalBox.address),
-            treasury.Deposit(),
+            treasury.Deposit,
             { from: withdrawalBox.address, amount: stakeAmount }
         )
 
@@ -116,10 +119,10 @@ contract('Prototype 2', async accounts => {
             ""
         );
 
-        let weiReserve = await exchange.weiReserve();
-        let divReserve = await exchange.divReserve();
-        let price = await exchange.divPrice();
-        let divReserveInWei = await exchange.toWei(divReserve);
+        // let weiReserve = await exchange.weiReserve();
+        // let divReserve = await exchange.divReserve();
+        // let price = await exchange.divPrice();
+        // let divReserveInWei = await exchange.toWei(divReserve);
 
         // Refill exchange
         await stakeManager.refillExchange();
@@ -129,5 +132,7 @@ contract('Prototype 2', async accounts => {
             web3.toBigNumber(web3.toWei(1, 'ether')),
             "The sell order was not filled"
         );
+
+        await exchange.withdrawPayments();
     });
 });
