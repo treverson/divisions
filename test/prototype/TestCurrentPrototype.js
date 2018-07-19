@@ -116,11 +116,6 @@ for(let i = 0; i < 10; i++)
             ""
         );
 
-        // let weiReserve = await exchange.weiReserve();
-        // let divReserve = await exchange.divReserve();
-        // let price = await exchange.divPrice();
-        // let divReserveInWei = await exchange.toWei(divReserve);
-
         // Refill exchange
         await stakeManager.refillExchange();
 
@@ -132,4 +127,5 @@ for(let i = 0; i < 10; i++)
 
         await exchange.withdrawPayments();
     });
+
 });

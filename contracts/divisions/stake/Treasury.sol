@@ -93,8 +93,6 @@ contract Treasury is ATreasury {
         casper.deposit.value(_amount)(_validatorAddress, _withdrawalBox);
         emit Stake(_validatorAddress, _withdrawalBox, _amount);
     }
-    event Debug(uint256 v);
-    event Debug(uint256 amount, address validattor, AWithdrawalBox box);
     
     function sweep(AWithdrawalBox _withdrawalBox) external {
         _withdrawalBox.sweep();
