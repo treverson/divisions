@@ -200,7 +200,9 @@ contract Senate is ASenate {
         proposal.executed = true;
 
         // Revert when call fails, so that we can retry with more gas,
-        // since we don't know whether there was enough
+        // since we don't know whether there was enough supplied
+        // As the whole transaction gets reverted, proposal.executed will be false agail if
+        // this call fails
         require(proposal.target.call.value(proposal.value)(_calldata));
         
         emit ProposalExecuted(_index);
