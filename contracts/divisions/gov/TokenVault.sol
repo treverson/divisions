@@ -47,6 +47,7 @@ contract TokenVault is ATokenVault {
         lockTokens(_value, _from);
     }
 
+    //TODO this is probably not correct
     function lockTokens(uint256 _amount, address _owner) internal {
         if(totalLockedLastUpdatedAt < block.timestamp){
             totalLockedLastBlock = totalLocked;
