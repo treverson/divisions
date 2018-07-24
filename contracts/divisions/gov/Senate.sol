@@ -201,7 +201,7 @@ contract Senate is ASenate {
 
         // Revert when call fails, so that we can retry with more gas,
         // since we don't know whether there was enough supplied
-        // As the whole transaction gets reverted, proposal.executed will be false agail if
+        // As the whole transaction gets reverted, proposal.executed will be false again if
         // this call fails
         require(proposal.target.call.value(proposal.value)(_calldata));
         
@@ -230,8 +230,8 @@ contract Senate is ASenate {
         return ended = proposalDebatingPeriodEnded(proposals[_index]);
     }
 
-    function proposalDebatingPeriodEnded(Proposal storage proposal) internal view returns (bool ended) {
-        uint256 debatingDeadline = proposal.createdAt + debatingPeriod;
+    function proposalDebatingPeriodEnded(Proposal storage _proposal) internal view returns (bool ended) {
+        uint256 debatingDeadline = _proposal.createdAt + debatingPeriod;
 
         return ended = block.timestamp > debatingDeadline;
     }
@@ -240,15 +240,15 @@ contract Senate is ASenate {
         return passed = proposalPassed(proposals[_index]);
     }
 
-    function proposalPassed(Proposal storage proposal) internal view returns (bool passed) {
-        uint256 totalYea = proposal.totalYea;
-        uint256 totalNay = proposal.totalNay;
+    function proposalPassed(Proposal storage _proposal) internal view returns (bool passed) {
+        uint256 totalYea = _proposal.totalYea;
+        uint256 totalNay = _proposal.totalNay;
         uint256 totalVotes = totalYea + totalNay;
         
-        uint256 voteQuorum = (proposal.totalLockedTokens * quorumFractionMultiplied) / quorumMultiplier;
+        uint256 voteQuorum = (_proposal.totalLockedTokens * quorumFractionMultiplied) / quorumMultiplier;
         passed = totalVotes > voteQuorum;
 
-        return passed = passed && proposal.totalYea > proposal.totalNay;
+        return passed = passed && totalYea > totalNay;
     }
 
     modifier onlyPresident() {

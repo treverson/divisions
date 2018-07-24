@@ -73,12 +73,12 @@ interface IDelegatingSenate {
         view
         returns (bool);
 
-    function proposalPassed() external view returns (bool);
+    function proposalPassed(uint256 _proposalIndex) external view returns (bool);
         
     event ProposalMade(
         uint256 indexed proposalIndex,
         address indexed executor,
-        bytes32 indexed calldatahash,
+        bytes32 indexed calldataHash,
         uint256 value,
         bytes32 description
     );
@@ -255,11 +255,13 @@ contract DelegatingSenate  is IDelegatingSenate {
         else
             proposal.totalNay += amountLocked;
 
-        proposal.votes.push(Vote ({
-            voter: msg.sender,
-            weight: amountLocked,
-            inSupport: _inSupport
-        }));
+        proposal.votes.push(
+            Vote ({
+                voter: msg.sender,
+                weight: amountLocked,
+                inSupport: _inSupport
+            })
+        );
         proposal.voteIndexes[msg.sender] = voteIndex;
 
         emit Voted(_proposalIndex, voteIndex, msg.sender, _inSupport);
@@ -268,28 +270,104 @@ contract DelegatingSenate  is IDelegatingSenate {
     function voteIndex(uint256 _proposalIndex, address _voter)
         external
         view
-        returns (uint256);
-
+        returns (uint256) 
+    {
+        return proposals_[_proposalIndex].voteIndexes[_voter];
+    }
 
     function executeProposal(uint256 _proposalIndex, bytes _calldata)
         external
-        payable;
+        payable 
+    {
+        assert(delegate_ == address(0));
+        Proposal storage proposal = proposals_[_proposalIndex];
+
+        require(
+            keccak256(_calldata) == proposal.calldataHash,
+            "Calldata is not correct"
+        );
+
+        require(
+            debatingPeriodEnded(proposal),
+            "The debating period has not ended yet"
+        );
+
+        require(!proposal.executed, "The proposal was already executed");
+
+        // The proposal's executor is the current delegate
+        delegate_ = proposal.executor;
+
+        // Revert when call fails, so that we can retry with more gas,
+        // since we don't know whether there was enough supplied
+        // As the whole transaction gets reverted, proposal.executed
+        // will be false again if this call fails
+        require(proposal.target.call.value(proposal.value)(_calldata));
+
+        // Reset the delegate to 0
+        delegate = address(0);
+        
+        emit ProposalExecuted(_index);
+    }
+
+    function doCall(address _target, bytes calldata)
+        external
+        payable
+        onlyByProposalExecution
+    {
+        require(_target.calldata.value(msg.value)(calldata));
+    }
 
     function changeVotingRules(uint256 _debatingPeriodMs, uint256 _quorum)
-        external;
+        external
+        onlyByProposalExecution
+    {
+        debatingPeriod = _debatingPeriod * 1 seconds;
+        quorumFractionMultiplied = _quorumFractionMultiplied;
+        
+        emit VotingRulesChanged();
+    }
 
-    function setPresident(address _newPresident) external;
+    function setPresident(address _newPresident)
+        external
+        onlyPresidentOrByProposalExecution
+    {
+        emit PresidentSet(president, _newPresident);
+        president = _newPresident;
+    }
 
     function debatingPeriodEnded(uint256 _proposalIndex)
         external
         view
-        returns (bool);
+        returns (bool)
+    {
+        return debatingPeriodEnded(proposals_[_proposalIndex]);
+    }
+
+    function proposalPassed(uint265 _proposalIndex)
+        external
+        view
+        returns (bool) 
+    {
+        return proposalPassed(proposals_[_proposalIndex]);
+    }
 
     // internal functions 
 
     function debatingPeriodEnded(Proposal storage _proposal) internal view returns (bool) {
-        //TODO
-        return false;
+        uint256 debatingDeadline = _proposal.createdAt + debatingPeriod;
+
+        return ended = block.timestamp > debatingDeadline;
+    }
+
+    function proposalPassed(Proposal storage _proposal) internal view returns (bool) {
+        uint256 totalYea = _proposal.totalYea;
+        uint256 totalNay = _proposal.totalNay;
+        uint256 totalVotes = totalYea + totalNay;
+        
+        uint256 voteQuorum = (_proposal.totalLockedTokens * quorumFractionMultiplied) / quorumMultiplier;
+        passed = totalVotes > voteQuorum;
+
+        return passed = passed && totalYea > totalNay;
     }
 
     // modifiers

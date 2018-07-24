@@ -7,7 +7,6 @@ const timeout = require('../../test-helpers/timeout');
 
 const Senate = artifacts.require('Senate');
 
-const MockTokenRecipient = artifacts.require('MockTokenRecipient');
 const MockTokenVault = artifacts.require('MockTokenVault');
 const MockSenateSubject = artifacts.require('MockSenateSubject');
 
