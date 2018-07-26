@@ -13,7 +13,7 @@ let truffleOptions = {
   networks: {
     development: {
       host: "localhost",
-      port: 9545,
+      port: 8545,
       network_id: "*", // Match any network id
     },
     ropsten: {

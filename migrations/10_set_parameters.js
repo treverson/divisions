@@ -12,7 +12,7 @@ let Exchange = artifacts.require('Exchange');
 
 let GovernanceToken = artifacts.require('GovernanceToken');
 let TokenVault = artifacts.require('TokenVault');
-let Senate = artifacts.require('Senate');
+let DelegatingSenate = artifacts.require('DelegatingSenate');
 
 
 module.exports = async (deployer, network, accounts) => {
@@ -39,26 +39,26 @@ module.exports = async (deployer, network, accounts) => {
         console.log('Transfering DivisionsToken mintership to Exchange ' + Exchange.address );
         await deployedDivToken.transferMintership(Exchange.address);
 
-        /** Transfer ownership of ownable contracts to Senate **/
-        console.log('Transfering ownership of StakeManager to Senate ' + Senate.address);
-        await deployedStakeManager.transferOwnership(Senate.address);
+        /** Transfer ownership of ownable contracts to DelegatingSenate **/
+        console.log('Transfering ownership of StakeManager to DelegatingSenate ' + DelegatingSenate.address);
+        await deployedStakeManager.transferOwnership(DelegatingSenate.address);
         
 
-        console.log('Transfering ownership of Exchange to Senate ' + Senate.address);
+        console.log('Transfering ownership of Exchange to DelegatingSenate ' + DelegatingSenate.address);
         let deployedExchange = Exchange.at(Exchange.address);
-        await deployedExchange.transferOwnership(Senate.address);
+        await deployedExchange.transferOwnership(DelegatingSenate.address);
 
-        console.log('Transfering ownership of DivisionsToken to Senate ' + Senate.address);
+        console.log('Transfering ownership of DivisionsToken to DelegatingSenate ' + DelegatingSenate.address);
         let deployedDivisionsToken = DivisionsToken.at(DivisionsToken.address);
-        await deployedDivisionsToken.transferOwnership(Senate.address);
+        await deployedDivisionsToken.transferOwnership(DelegatingSenate.address);
 
-        console.log('Transfering ownership of Treasury to Senate ' + Senate.address);
-        await deployedTreasury.transferOwnership(Senate.address);
+        console.log('Transfering ownership of Treasury to Senate ' + DelegatingSenate.address);
+        await deployedTreasury.transferOwnership(DelegatingSenate.address);
 
         /** Store addresses in file **/
         let addresses = {
             tokenVault: TokenVault.address,
-            senate: Senate.address,
+            delegatingSenate: DelegatingSenate.address,
             casper: MockCasper.address,
             treasury: Treasury.address,
             stakeManager: StakeManager.address,

@@ -47,18 +47,20 @@ contract TokenVault is ATokenVault {
         lockTokens(_value, _from);
     }
 
-    //TODO this is probably not correct
+    //TODO fix this: what happens if someone who has locked a large amount
+    // of tokens before a proposal was made, and then locks some more?
+    // How can we ensure it's possible for the proposal to pass?
     function lockTokens(uint256 _amount, address _owner) internal {
-        if(totalLockedLastUpdatedAt < block.timestamp){
+        if(totalLockedLastUpdatedAt < block.number){
             totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.timestamp;
+            totalLockedLastUpdatedAt = block.number;
         }
 
         token.transferFrom(_owner, address(this), _amount);
         
         Locker storage locker = lockers[_owner];
         locker.amount = locker.amount.add(_amount);
-        locker.lastIncreasedAt = block.timestamp;
+        locker.lastIncreasedAt = block.number;
 
         totalLocked = totalLocked.add(_amount);
 
@@ -66,9 +68,9 @@ contract TokenVault is ATokenVault {
     }
 
     function unlockTokens(uint256 _amount) external {
-        if(totalLockedLastUpdatedAt < block.timestamp){
+        if(totalLockedLastUpdatedAt < block.number){
             totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.timestamp;
+            totalLockedLastUpdatedAt = block.number;
         }
 
         Locker storage locker = lockers[msg.sender];

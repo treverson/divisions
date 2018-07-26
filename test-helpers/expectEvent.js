@@ -6,7 +6,7 @@ module.exports = async function (transaction, event, params, message) {
         // Get the transaction hash, to compare logged events with later
         let receipt = await transaction;
         let txHash = receipt.tx;
-        
+
         // Filter out any params with value '@any'
         let tempparams = Object.assign({}, params);
         for (var key in tempparams)
@@ -32,23 +32,24 @@ module.exports = async function (transaction, event, params, message) {
         // If no event was logged
         if (!eventArgs)
             assert.fail(new Error("No event logged"));
-        
-        
-        let tempEventArgs = Object.assign({}, eventArgs);
-        for (var key in params) {
-            if (params[key] === '@any' && tempEventArgs[key]) {
-                delete params[key];
-                delete tempEventArgs[key];
-            }
-        }
+
         if (params) {
+            let tempEventArgs = Object.assign({}, eventArgs);
+            for (var key in params) {
+                if (params[key] === '@any' && tempEventArgs[key]) {
+                    delete params[key];
+                    delete tempEventArgs[key];
+                }
+            }
+
             assert.deepEqual(tempEventArgs, params, message);
         }
         eventArgs.txHash = txHash;
         return eventArgs;
     } catch (err) {
 
-        if (err.__proto__.toString() == "AssertionError") throw (err);
-        else assert.fail("Error", err);
+        // if (err.__proto__.toString() == "AssertionError") throw (err);
+        // else assert.fail("Error", err);
+        throw(err);
     }
 }

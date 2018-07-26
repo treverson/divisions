@@ -10,6 +10,7 @@
     "openzeppelin-solidity": "^1.11.0"
   },
   "devDependencies": {
+    "husky": "^1.0.0-rc.13",
     "truffle": "^4.1.13",
     "truffle-hdwallet-provider": "0.0.5"
   },
@@ -35,5 +36,11 @@
   "bugs": {
     "url": "https://github.com/hdoordt/divisionsCore/issues"
   },
-  "homepage": "https://divisions.com/"
+  "homepage": "https://divisions.com/",
+  
+  "husky": {
+    "hooks": {
+      "pre-push": "truffle test"
+    }
+  }
 }

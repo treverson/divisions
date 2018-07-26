@@ -27,7 +27,8 @@ contract('TokenVault', async accounts => {
         let lockerBefore = new Locker(await tokenVault.lockers(accounts[0]));
 
         let blockhash = (await tokenVault.lockTokens(lockAmount)).receipt.blockHash;
-        let blockTimestamp = web3.toBigNumber((await web3.eth.getBlock(blockhash)).timestamp);
+
+        let blockNumber = web3.toBigNumber((await web3.eth.getBlock(blockhash)).number);
 
         let balanceAfter = await govToken.balanceOf(accounts[0]);
         let lockerAfter = new Locker(await tokenVault.lockers(accounts[0]));
@@ -42,7 +43,7 @@ contract('TokenVault', async accounts => {
             lockerAfter,
             {
                 amount: lockerBefore.amount.plus(lockAmount),
-                lastIncreasedAt: blockTimestamp
+                lastIncreasedAt: blockNumber
             },
             "The locker was not updated correctly"
         );
@@ -55,7 +56,7 @@ contract('TokenVault', async accounts => {
         let lockerBefore = new Locker(await tokenVault.lockers(accounts[0]));
 
         let blockhash = (await govToken.approveAndCall(tokenVault.address, lockAmount, "")).receipt.blockHash;
-        let blockTimestamp = web3.toBigNumber((await web3.eth.getBlock(blockhash)).timestamp);
+        let blockNumber = web3.toBigNumber((await web3.eth.getBlock(blockhash)).number);
 
         let balanceAfter = await govToken.balanceOf(accounts[0]);
         let lockerAfter = new Locker(await tokenVault.lockers(accounts[0]));
@@ -70,7 +71,7 @@ contract('TokenVault', async accounts => {
             lockerAfter,
             {
                 amount: lockerBefore.amount.plus(lockAmount),
-                lastIncreasedAt: blockTimestamp
+                lastIncreasedAt: blockNumber
             },
             "The locker was not updated correctly"
         );
@@ -139,7 +140,7 @@ contract('TokenVault', async accounts => {
 
     it('keeps track of the total amount of locked tokens', async () => {
         let lockAmount = web3.toBigNumber(100e18);
-
+        
         let totalLockedBefore = await tokenVault.totalLocked();
         
         await govToken.approve(tokenVault.address, lockAmount); 

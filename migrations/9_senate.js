@@ -2,15 +2,15 @@ const path = require('path');
 const conf = require(path.join(__dirname, 'migrationConfig'));
 
 let TokenVault = artifacts.require('TokenVault');
-let Senate = artifacts.require('Senate');
+let DelegatingSenate = artifacts.require('DelegatingSenate');
 
 module.exports = async (deployer, network, accounts) => {
     let president = accounts[0];
 
     await deployer.deploy(
-        Senate,
+        DelegatingSenate,
         president,
-        conf.DEBATING_PERIOD_SECS,
+        conf.DEBATING_PERIOD_BLOCKS,
         conf.QUORUM_FRACTION_MULTIPLIED,
         TokenVault.address
     );

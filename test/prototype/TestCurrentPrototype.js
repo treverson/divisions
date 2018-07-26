@@ -16,7 +16,7 @@ let DivisionToken = artifacts.require('DivisionsToken');
 let Exchange = artifacts.require('Exchange');
 
 let GovernanceToken = artifacts.require('GovernanceToken');
-let Senate = artifacts.require('Senate');
+let DelegatingSenate = artifacts.require('DelegatingSenate');
 let TokenVault = artifacts.require('TokenVault');
 
 contract('Prototype 2', async accounts => {
@@ -42,11 +42,11 @@ contract('Prototype 2', async accounts => {
         divToken = await DivisionToken.deployed();
         exchange = await Exchange.deployed();
         govToken = await GovernanceToken.deployed();
-        senate = await Senate.deployed();
+        senate = await DelegatingSenate.deployed();
         tokenVault = await TokenVault.deployed();
     });
-for(let i = 0; i < 10; i++)
-    it('Completes a staking cycle ' + i, async () => {
+
+    it('Completes a staking cycle', async () => {
         // Place buy order
         await exchange.placeBuyOrder({ value: web3.toWei(1, 'ether') });
 

@@ -7,9 +7,11 @@ import "../util/AddressUtils.sol";
 interface IDelegatingSenate {
 
     function president() external view returns (address);
-    function debatingPeriod() external view returns (uint256);
+    function debatingPeriodBlocks() external view returns (uint256);
     function quorumMultiplier() external pure returns (uint256);
     function quorumFractionMultiplied() external view returns (uint256);
+    
+    function delegate() external view returns (address);
 
     function proposalsLength() external view returns (uint256);
 
@@ -18,7 +20,7 @@ interface IDelegatingSenate {
         view
         returns (
             address executor,
-            bytes calldataHash,
+            bytes32 calldataHash,
             uint256 value,
             bytes32 description,
             uint256 createdAt,
@@ -42,7 +44,6 @@ interface IDelegatingSenate {
             bool inSupport
         );
 
-    function delegate() external view returns (address);
 
     function makeProposal(
         address _executor,
@@ -63,7 +64,10 @@ interface IDelegatingSenate {
         external
         payable;
 
-    function changeVotingRules(uint256 _debatingPeriodMs, uint256 _quorum)
+    function changeVotingRules(
+        uint256 _debatingPeriodBlocks,
+        uint256 _quorumFractionMultiplied
+    )
         external;
 
     function setPresident(address _newPresident) external;
@@ -73,7 +77,10 @@ interface IDelegatingSenate {
         view
         returns (bool);
 
-    function proposalPassed(uint256 _proposalIndex) external view returns (bool);
+    function proposalPassed(uint256 _proposalIndex)
+        external
+        view
+        returns (bool);
         
     event ProposalMade(
         uint256 indexed proposalIndex,
@@ -83,15 +90,24 @@ interface IDelegatingSenate {
         bytes32 description
     );
 
-    event Voted(uint256 indexed proposalIndex, uint256 indexed voteIndex, address indexed voter, bool _inSupport);
+    event Voted(
+        uint256 indexed proposalIndex,
+        uint256 indexed voteIndex,
+        address indexed voter,
+        bool inSupport
+    );
+
     event ProposalExecuted(uint256 indexed proposalIndex);
 
-    event VotingRulesChanged(uint256 debatingPeriodMs, uint256 quorum);
+    event VotingRulesChanged(
+        uint256 debatingPeriodMs,
+        uint256 quorumFractionMultiplied
+    );
     event PresidentSet(address previousPresident, address newPresident);
 }
 
 /* Senate that uses a delegate contract that executes a batch proposal */
-contract DelegatingSenate  is IDelegatingSenate {    
+contract DelegatingSenate is IDelegatingSenate {    
     using AddressUtils for address;
 
     struct Proposal {
@@ -118,26 +134,28 @@ contract DelegatingSenate  is IDelegatingSenate {
 
     // Fields
 
+    uint256 internal constant quorumMultiplier_ = 1e18;
+
     ATokenVault internal tokenVault_;
 
     address internal delegate_;
 
     address internal president_;
-    uint256 internal debatingPeriod_;
+    uint256 internal debatingPeriodBlocks_;
     uint256 internal quorumFractionMultiplied_;
 
     Proposal[] internal proposals_;
 
     constructor(
         address _president,
-        uint256 _debatingPeriod,
+        uint256 _debatingPeriodBlocks,
         uint256 _quorumFractionMultiplied,
         ATokenVault _tokenVault
     )
     public
     {
         president_ = _president;
-        debatingPeriod_ = _debatingPeriod;
+        debatingPeriodBlocks_ = _debatingPeriodBlocks;
         quorumFractionMultiplied_ = _quorumFractionMultiplied;
         tokenVault_ = _tokenVault;
     }
@@ -148,12 +166,12 @@ contract DelegatingSenate  is IDelegatingSenate {
         return president_;
     }
 
-    function debatingPeriod() external view returns (uint256) {
-        return debatingPeriod_;
+    function debatingPeriodBlocks() external view returns (uint256) {
+        return debatingPeriodBlocks_;
     }
 
     function quorumMultiplier() external pure returns (uint256) {
-        return 10e18;
+        return quorumMultiplier_;
     }
 
     function quorumFractionMultiplied() external view returns (uint256) {
@@ -173,7 +191,7 @@ contract DelegatingSenate  is IDelegatingSenate {
         view
         returns (
             address executor,
-            bytes calldataHash,
+            bytes32 calldataHash,
             uint256 value,
             bytes32 description,
             uint256 createdAt,
@@ -181,7 +199,21 @@ contract DelegatingSenate  is IDelegatingSenate {
             uint256 totalYea,
             uint256 totalNay,
             uint256 totalLockedTokens
+        ) 
+    {
+        Proposal storage proposal = proposals_[_index];
+        return (
+            proposal.executor, 
+            proposal.calldataHash,
+            proposal.value, 
+            proposal.description,
+            proposal.createdAt,
+            proposal.executed,
+            proposal.totalYea,
+            proposal.totalNay,
+            proposal.totalLockedTokens
         );
+    }
 
     function proposalVotesLength(uint256 _proposalIndex)
         external
@@ -200,7 +232,7 @@ contract DelegatingSenate  is IDelegatingSenate {
             bool inSupport
         )
     {
-        Vote storage vote = proposals_[_voteIndex].votes[_voteIndex];
+        Vote storage vote = proposals_[_proposalIndex].votes[_voteIndex];
         return (vote.voter, vote.weight, vote.inSupport);
     }
 
@@ -224,7 +256,7 @@ contract DelegatingSenate  is IDelegatingSenate {
         proposal.calldataHash = _calldataHash;
         proposal.value = _value;
         proposal.description = _description;
-        proposal.createdAt = block.timestamp;
+        proposal.createdAt = block.number;
 
         proposal.totalLockedTokens = tokenVault_.totalLockedLastBlock();
         
@@ -234,18 +266,19 @@ contract DelegatingSenate  is IDelegatingSenate {
 
         emit ProposalMade(index, _executor, _calldataHash, _value, _description);
     }
-
+   
     function vote(uint256 _proposalIndex, bool _inSupport) external {
         Proposal storage proposal = proposals_[_proposalIndex];
-
+        
         require(!debatingPeriodEnded(proposal), "The debating period has ended");
         require(proposal.voteIndexes[msg.sender] == 0, "That address already voted");
 
         uint256 amountLocked;
         uint256 lastIncreasedAt;
         (amountLocked, lastIncreasedAt) = tokenVault_.lockers(msg.sender);
-        
+
         require(amountLocked > 0, "Can only vote when more that 0 GOV is locked");
+    
         require(lastIncreasedAt < proposal.createdAt, "Can only vote with GOV that is locked before the proposal was created");
 
         uint256 voteIndex = proposal.votes.length;
@@ -292,6 +325,11 @@ contract DelegatingSenate  is IDelegatingSenate {
             "The debating period has not ended yet"
         );
 
+        require(
+            proposalPassed(proposal),
+            "The proposal has not passed the vote"
+        );
+
         require(!proposal.executed, "The proposal was already executed");
 
         // The proposal's executor is the current delegate
@@ -301,39 +339,47 @@ contract DelegatingSenate  is IDelegatingSenate {
         // since we don't know whether there was enough supplied
         // As the whole transaction gets reverted, proposal.executed
         // will be false again if this call fails
-        require(proposal.target.call.value(proposal.value)(_calldata));
+        require(proposal.executor.call.value(proposal.value)(_calldata));
+
+        proposal.executed = true;
 
         // Reset the delegate to 0
-        delegate = address(0);
+        delegate_ = address(0);
         
-        emit ProposalExecuted(_index);
+        emit ProposalExecuted(_proposalIndex);
     }
 
-    function doCall(address _target, bytes calldata)
+    function forwardCall(address _target, bytes calldata)
         external
         payable
         onlyByProposalExecution
     {
-        require(_target.calldata.value(msg.value)(calldata));
+        require(_target.call.value(msg.value)(calldata));
     }
 
-    function changeVotingRules(uint256 _debatingPeriodMs, uint256 _quorum)
+    function changeVotingRules(
+        uint256 _debatingPeriodBlocks,
+        uint256 _quorumFractionMultiplied
+    )
         external
         onlyByProposalExecution
     {
-        debatingPeriod = _debatingPeriod * 1 seconds;
-        quorumFractionMultiplied = _quorumFractionMultiplied;
-        
-        emit VotingRulesChanged();
+        debatingPeriodBlocks_ = _debatingPeriodBlocks;
+        quorumFractionMultiplied_ = _quorumFractionMultiplied;
+
+        emit VotingRulesChanged(_debatingPeriodBlocks, _quorumFractionMultiplied);
     }
 
     function setPresident(address _newPresident)
         external
         onlyPresidentOrByProposalExecution
     {
-        emit PresidentSet(president, _newPresident);
-        president = _newPresident;
+        emit Calldata(msg.data);
+        emit PresidentSet(president_, _newPresident);
+        president_ = _newPresident;
     }
+
+    event Calldata(bytes d);
 
     function debatingPeriodEnded(uint256 _proposalIndex)
         external
@@ -343,7 +389,7 @@ contract DelegatingSenate  is IDelegatingSenate {
         return debatingPeriodEnded(proposals_[_proposalIndex]);
     }
 
-    function proposalPassed(uint265 _proposalIndex)
+    function proposalPassed(uint256 _proposalIndex)
         external
         view
         returns (bool) 
@@ -354,20 +400,23 @@ contract DelegatingSenate  is IDelegatingSenate {
     // internal functions 
 
     function debatingPeriodEnded(Proposal storage _proposal) internal view returns (bool) {
-        uint256 debatingDeadline = _proposal.createdAt + debatingPeriod;
+        uint256 debatingDeadline = _proposal.createdAt + debatingPeriodBlocks_;
 
-        return ended = block.timestamp > debatingDeadline;
+        return block.number > debatingDeadline;
     }
 
-    function proposalPassed(Proposal storage _proposal) internal view returns (bool) {
+    function proposalPassed(Proposal storage _proposal)
+        internal
+        view
+        returns (bool) 
+    {
         uint256 totalYea = _proposal.totalYea;
         uint256 totalNay = _proposal.totalNay;
         uint256 totalVotes = totalYea + totalNay;
         
-        uint256 voteQuorum = (_proposal.totalLockedTokens * quorumFractionMultiplied) / quorumMultiplier;
-        passed = totalVotes > voteQuorum;
-
-        return passed = passed && totalYea > totalNay;
+        uint256 voteQuorum = (_proposal.totalLockedTokens * quorumFractionMultiplied_) / quorumMultiplier_;
+        
+        return totalVotes > voteQuorum && totalYea > totalNay;
     }
 
     // modifiers

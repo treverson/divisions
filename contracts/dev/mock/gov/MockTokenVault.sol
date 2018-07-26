@@ -7,22 +7,22 @@ contract MockTokenVault is ATokenVault, MockTokenRecipient {
     uint256 totalLockedLastUpdatedAt;
 
     function lockTokens(uint256 _amount) external {
-        if(totalLockedLastUpdatedAt < block.timestamp){
+        if(totalLockedLastUpdatedAt < block.number){
             totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.timestamp;
+            totalLockedLastUpdatedAt = block.number;
         }
         Locker storage locker = lockers[msg.sender];
 
         locker.amount += _amount;
-        locker.lastIncreasedAt = block.timestamp;
+        locker.lastIncreasedAt = block.number;
         totalLocked += _amount;
         emit TokensLocked(msg.sender, _amount);
     }
 
     function unlockTokens(uint256 _amount) external {
-        if(totalLockedLastUpdatedAt < block.timestamp){
+        if(totalLockedLastUpdatedAt < block.number){
             totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.timestamp;
+            totalLockedLastUpdatedAt = block.number;
         }
         require(lockers[msg.sender].amount >= _amount);
 
