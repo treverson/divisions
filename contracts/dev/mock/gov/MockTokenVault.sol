@@ -3,8 +3,7 @@ pragma solidity 0.4.24;
 import "../../../divisions/gov/TokenVault.sol";
 import "../token/MockTokenRecipient.sol";
 
-contract MockTokenVault is ITokenVault, MockTokenRecipient {
-   
+contract MockTokenVault is ITokenVault, MockTokenRecipient {   
     struct Locker{
         uint256 amount;
         uint256 unlockAtBlock;
@@ -15,6 +14,7 @@ contract MockTokenVault is ITokenVault, MockTokenRecipient {
 
     constructor(CallingToken _token) public {
         token_ = _token;
+
     }
 
     function token() external view returns (CallingToken) {
