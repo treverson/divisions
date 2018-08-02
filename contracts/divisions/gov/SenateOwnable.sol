@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "./DelegatingSenate.sol";
+import "./IDelegatingSenate.sol";
 
 interface ISenateOwnable {
     function owner() external view returns (IDelegatingSenate);
