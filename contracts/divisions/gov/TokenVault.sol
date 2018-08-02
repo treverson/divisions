@@ -1,88 +1,110 @@
 pragma solidity 0.4.24;
 
+import "../gov/SenateOwnable.sol"; 
 import "../token/CallingToken.sol";
 import "../token/ITokenRecipient.sol";
 
-contract ATokenVault is ITokenRecipient {
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/math/Math.sol";
 
-    uint256 public totalLocked;
-    uint256 public totalLockedLastBlock;
 
-    struct Locker {
-        // The amount of DIVG that is locked
-        uint256 amount;
-        // The last time the amount locked was increased
-        uint256 lastIncreasedAt;
-    }
+interface ITokenVault {
 
-    mapping(address => Locker) public lockers;
+    function token() external view returns (CallingToken);
 
-    function lockTokens(uint256 _amount) external;
-    function unlockTokens(uint256 _amount) external;
+    function lockers(address _addr)
+        external
+        view
+        returns(uint256, uint256);
 
-    event TokensLocked(address indexed owner, uint256 amount);
-    event TokensUnlocked(address indexed owner, uint256 amount);
+    function lockTokens(
+        address _addr,
+        uint256 _amount,
+        uint256 _unlockAtBlock
+    )
+        external;
+
+    function unlockTokens() external;
+
+    event Lock(address indexed addr, uint256 amount, uint256 unlockAtBlock);
+    event Unlock(address indexed addr, uint256 amount);
 }
 
-contract TokenVault is ATokenVault {
+
+contract TokenVault is SenateOwnable, ITokenVault, ITokenRecipient {
     using SafeMath for uint256;
 
-    uint256 totalLockedLastUpdatedAt;
+    CallingToken internal token_;
 
-    CallingToken public token;
-
-    constructor(CallingToken _token)
-        public
-    {
-        token = _token;
+    struct Locker{
+        uint256 amount;
+        uint256 unlockAtBlock;
     }
 
-    function lockTokens(uint256 _amount) external {
-        lockTokens(_amount, msg.sender);
+    mapping(address => Locker) internal lockers_;
+
+    constructor(IDelegatingSenate _owner, CallingToken _token) 
+    SenateOwnable(_owner)
+    public {
+        token_ = _token;
     }
 
     function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external payable {
-        bytes(_extraData); // Suppress warning on unused variable
-        require(_token == address(token), "Only accepts approvals from associated token");
-        lockTokens(_value, _from);
+        require(_token == address(token_), "Invalid token");
+        Locker locker = lockers_[_from];
+        
+        uint256 unlockAtBlock = Math.max256(locker.unlockAtBlock, block.number);
+        doLockTokens(_from, _value, unlockAtBlock);
     }
 
-    //TODO fix this: what happens if someone who has locked a large amount
-    // of tokens before a proposal was made, and then locks some more?
-    // How can we ensure it's possible for the proposal to pass?
-    function lockTokens(uint256 _amount, address _owner) internal {
-        if(totalLockedLastUpdatedAt < block.number){
-            totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.number;
-        }
-
-        token.transferFrom(_owner, address(this), _amount);
-        
-        Locker storage locker = lockers[_owner];
-        locker.amount = locker.amount.add(_amount);
-        locker.lastIncreasedAt = block.number;
-
-        totalLocked = totalLocked.add(_amount);
-
-        emit TokensLocked(_owner, _amount);
+    function token() external view returns (CallingToken){
+        return token_;
     }
 
-    function unlockTokens(uint256 _amount) external {
-        if(totalLockedLastUpdatedAt < block.number){
-            totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.number;
-        }
+    function lockers(address _addr)
+        external
+        view
+        returns(uint256, uint256)
+    {
+        Locker storage locker = lockers_[_addr];
 
-        Locker storage locker = lockers[msg.sender];
+        return (locker.amount, locker.unlockAtBlock);
+    }
+
+    // Locks the amount of tokens and updates the moment the locker can be unlocked
+    function lockTokens(address _addr, uint256 _amount, uint256 _unlockAtBlock) external {
+        doLockTokens(_addr, _amount, _unlockAtBlock);
+    }
+
+    function doLockTokens(address _addr, uint256 _amount, uint256 _unlockAtBlock) internal {
+        Locker storage locker = lockers_[_addr];
         
-        // SafeMath.sub() checks for underflow and
-        // reverts if locker.amount - _amount < 0
-        locker.amount = locker.amount.sub(_amount);
+        require(
+            _unlockAtBlock >= locker.unlockAtBlock,
+            "Cannot decrease the withdrawal delay"
+        );
 
-        totalLocked = totalLocked.sub(_amount);
+        if(_amount > 0) {
+            token_.transferFrom(_addr, address(this), _amount);
+            locker.amount = locker.amount.add(_amount);
+        }
+        locker.unlockAtBlock = _unlockAtBlock;
+        
+        emit Lock(_addr, _amount, _unlockAtBlock);
+    }
 
-        token.transfer(msg.sender, _amount);
-         
-        emit TokensUnlocked(msg.sender, _amount);
+    // Unlocks tokens, transfering them back to the owner
+    function unlockTokens() external {
+        Locker storage locker = lockers_[msg.sender];
+
+        require(locker.amount > 0, "Cannot withdraw from an empty locker");
+        require(locker.unlockAtBlock < block.number, "Cannot unlock this locker yet");
+
+        uint256 amountLocked = locker.amount;
+        locker.amount = 0;
+
+        emit Unlock(msg.sender, amountLocked);
+
+        token_.transfer(msg.sender, amountLocked);        
     }
 }

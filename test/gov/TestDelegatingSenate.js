@@ -10,7 +10,7 @@ const DelegatingSenate = artifacts.require('DelegatingSenate');
 const MockTokenVault = artifacts.require('MockTokenVault');
 const MockDelegatingSenateSubject = artifacts.require('MockDelegatingSenateSubject');
 const MockExecutor = artifacts.require('MockExecutor');
-
+const MockGovernanceToken = artifacts.require('MockGovernanceToken');
 
 const DEBATING_PERIOD_BLOCKS = 30;
 const QOURUM_FRACTION = 0.1;
@@ -18,13 +18,13 @@ const QUORUM_MULTIPLIER = 1e18;
 
 contract('DelegatingSenate', async accounts => {
     let senate;
-
+    let token;
     let tokenVault;
     let president = accounts[1];
 
     beforeEach(async () => {
-
-        tokenVault = await MockTokenVault.new();
+        token = await MockGovernanceToken.new(100e18);
+        tokenVault = await MockTokenVault.new(token.address);
 
         senate = await DelegatingSenate.new(
             president,
@@ -690,16 +690,16 @@ class Proposal {
         this.value = proposalTuple[2];
         this.description = proposalTuple[3];
         this.createdAt = proposalTuple[4];
-        this.executed = proposalTuple[5];
-        this.totalYea = proposalTuple[6];
-        this.totalNay = proposalTuple[7];
-        this.totalLockedTokens = proposalTuple[8];
+        this.votingEndsAt = proposalTuple[5];
+        this.executed = proposalTuple[6];
+        this.totalYea = proposalTuple[7];
+        this.totalNay = proposalTuple[8];
     }
 }
 
 class Vote {
     constructor(voteTuple) {
-        this.voter = voteTuple[0];
+        this.proposalIndex = voteTuple[0];
         this.weight = voteTuple[1];
         this.inSupport = voteTuple[2];
     }

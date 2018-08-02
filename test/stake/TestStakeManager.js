@@ -23,7 +23,7 @@ contract('StakeManager', async accounts => {
     let exchange;
     
     before(async () => {
-
+        
         validator = accounts[9];
 
         casper = await MockCasper.new(MIN_DEPOSIT_SIZE, EPOCH_LENGTH, DYNASTY_LOGOUT_DELAY, WITHDRAWAL_DELAY);

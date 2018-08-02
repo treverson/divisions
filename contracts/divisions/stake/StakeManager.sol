@@ -1,14 +1,16 @@
 pragma solidity 0.4.24;
 
+// import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "./Treasury.sol";
 import "./WithdrawalBox.sol";
 import "./ACasper.sol";
+
+import "../gov/SenateOwnable.sol";
 import "../exchange/Exchange.sol";
 
-contract AStakeManager is Ownable {
+contract AStakeManager is SenateOwnable {
     
     struct VoteMessage {
         bytes messageRLP;

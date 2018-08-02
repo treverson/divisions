@@ -1,7 +1,11 @@
 const expectThrow = require("../../test-helpers/expectThrow");
 const expectEvent = require("../../test-helpers/expectEvent");
 
+const BigNumber = require('bignumber.js');
+
 // ============ Test TokenVault ============ //
+
+const MockDelegatingSenate = artifacts.require('MockDelegatingSenate');
 
 const TokenVault = artifacts.require('TokenVault');
 const GovernanceToken = artifacts.require('GovernanceToken');
@@ -11,166 +15,162 @@ const GOV_TOKEN_INITIAL_SUPPLY = 180e6 * 1e18;
 contract('TokenVault', async accounts => {
     let tokenVault;
     let govToken;
+    let senate;
 
     before(async () => {
 
+        senate = await MockDelegatingSenate.new();
+
         govToken = await GovernanceToken.new(GOV_TOKEN_INITIAL_SUPPLY);
 
-        tokenVault = await TokenVault.new(govToken.address);
+        tokenVault = await TokenVault.new(senate.address, govToken.address);
     });
 
     it('locks tokens', async () => {
-        let lockAmount = web3.toBigNumber(10e18);
-        await govToken.approve(tokenVault.address, lockAmount);
+        let lockedAmount = web3.toBigNumber(100e18);
 
-        let balanceBefore = await govToken.balanceOf(accounts[0]);
         let lockerBefore = new Locker(await tokenVault.lockers(accounts[0]));
+        let unlockAtBlock = web3.toBigNumber(web3.eth.blockNumber + 1);
+        await govToken.approve(tokenVault.address, lockedAmount);
+        await tokenVault.lockTokens(accounts[0], lockedAmount, unlockAtBlock);
 
-        let blockhash = (await tokenVault.lockTokens(lockAmount)).receipt.blockHash;
-
-        let blockNumber = web3.toBigNumber((await web3.eth.getBlock(blockhash)).number);
-
-        let balanceAfter = await govToken.balanceOf(accounts[0]);
         let lockerAfter = new Locker(await tokenVault.lockers(accounts[0]));
-
-        assert.deepEqual(
-            balanceAfter,
-            balanceBefore.minus(lockAmount),
-            "The token balance was not deducted"
-        );
-
+        
         assert.deepEqual(
             lockerAfter,
             {
-                amount: lockerBefore.amount.plus(lockAmount),
-                lastIncreasedAt: blockNumber
+                amount: lockerBefore.amount.add(lockedAmount),
+                unlockAtBlock: unlockAtBlock
             },
             "The locker was not updated correctly"
+        );
+
+        await govToken.approve(tokenVault.address, lockedAmount);
+
+        await expectThrow(
+            tokenVault.lockTokens(accounts[0], lockedAmount, unlockAtBlock.sub(1)),
+            "Should throw when unlockAtBlock is less then current"
         );
     });
 
     it('locks tokens on receiveApproval', async () => {
-        let lockAmount = web3.toBigNumber(10e18);
+        let lockedAmount = web3.toBigNumber(100e18);
 
-        let balanceBefore = await govToken.balanceOf(accounts[0]);
         let lockerBefore = new Locker(await tokenVault.lockers(accounts[0]));
+        let unlockAtBlock = web3.toBigNumber(web3.eth.blockNumber + 1);
 
-        let blockhash = (await govToken.approveAndCall(tokenVault.address, lockAmount, "")).receipt.blockHash;
-        let blockNumber = web3.toBigNumber((await web3.eth.getBlock(blockhash)).number);
+        await govToken.approveAndCall(tokenVault.address, lockedAmount, "");
 
-        let balanceAfter = await govToken.balanceOf(accounts[0]);
         let lockerAfter = new Locker(await tokenVault.lockers(accounts[0]));
-
-        assert.deepEqual(
-            balanceAfter,
-            balanceBefore.minus(lockAmount),
-            "The token balance was not deducted"
-        );
-
+        
         assert.deepEqual(
             lockerAfter,
             {
-                amount: lockerBefore.amount.plus(lockAmount),
-                lastIncreasedAt: blockNumber
+                amount: lockerBefore.amount.add(lockedAmount),
+                unlockAtBlock: unlockAtBlock
             },
             "The locker was not updated correctly"
         );
     });
 
     it('logs an event on lockTokens', async () => {
-        let lockAmount = web3.toBigNumber(10e18);
-        await govToken.approve(tokenVault.address, lockAmount);
+        let lockedAmount = web3.toBigNumber(100e18);
+
+        let lockerBefore = new Locker(await tokenVault.lockers(accounts[0]));
+
+        let unlockAtBlock = web3.toBigNumber(BigNumber.max(
+            web3.toBigNumber(web3.eth.blockNumber + 1),
+            lockerBefore.unlockAtBlock
+        ).valueOf());
 
         await expectEvent(
-            tokenVault.lockTokens(lockAmount),
-            tokenVault.TokensLocked,
-            { owner: accounts[0], amount: lockAmount }
+            govToken.approveAndCall(tokenVault.address, lockedAmount, ""),
+            tokenVault.Lock,
+            {
+                addr: accounts[0],
+                amount: lockedAmount,
+                unlockAtBlock: unlockAtBlock
+            }
         );
     });
 
     it('unlocks tokens', async () => {
-        let lockAmount = web3.toBigNumber(10e18);
-        await govToken.approve(tokenVault.address, lockAmount);
-        await tokenVault.lockTokens(lockAmount);
+        let lockedAmount = web3.toBigNumber(100e18);
+        let unlockAtBlock = web3.toBigNumber(web3.eth.blockNumber + 1);
+        await govToken.approveAndCall(tokenVault.address, lockedAmount, "");
 
-        let lockerBefore = new Locker(await tokenVault.lockers(accounts[0]));
         let balanceBefore = await govToken.balanceOf(accounts[0]);
+        let lockerBefore = new Locker(await tokenVault.lockers(accounts[0]));
 
-        await expectThrow(
-            tokenVault.unlockTokens(lockerBefore.amount.add(1)),
-            "Cannot unlock more than is locked"
-        );
+        await tokenVault.unlockTokens();
 
-        await tokenVault.unlockTokens(lockerBefore.amount);
-
-        let lockerAfter = new Locker(await tokenVault.lockers(accounts[0]));
         let balanceAfter = await govToken.balanceOf(accounts[0]);
+        let lockerAfter = new Locker(await tokenVault.lockers(accounts[0]));
 
         assert.deepEqual(
             balanceAfter,
-            balanceBefore.plus(lockerBefore.amount),
-            "The tokens were not sent back"
+            balanceBefore.add(lockerBefore.amount),
+            "The tokens were not retributed"
         );
 
         assert.deepEqual(
             lockerAfter,
             {
                 amount: web3.toBigNumber(0),
-                lastIncreasedAt: lockerBefore.lastIncreasedAt
+                unlockAtBlock: lockerBefore.unlockAtBlock
             },
-            "The locker was not updated correctly"
+            "The locker was not emptied"
         );
 
+        await expectThrow(
+            tokenVault.unlockTokens(),
+            "Cannot unlock an empty locker"
+        );
+
+        unlockAtBlock = web3.toBigNumber(web3.eth.blockNumber + 20);
+        await govToken.approve(tokenVault.address, lockedAmount);
+        await tokenVault.lockTokens(accounts[0], lockedAmount, unlockAtBlock);
+
+        await expectThrow(
+            tokenVault.unlockTokens(),
+            "Cannot unlock a locker for which there is time left"
+        );
+
+        
     });
 
     it('logs an event on unlockTokens', async () => {
-        let lockAmount = web3.toBigNumber(10e18);
-        await govToken.approve(tokenVault.address, lockAmount);
-        await tokenVault.lockTokens(lockAmount);
+        let locker = new Locker(await tokenVault.lockers(accounts[0]));
+
+        let blocksLeft = locker.unlockAtBlock.minus(web3.eth.blockNumber);
+        // Let some blocks pass
+        for(let i = 0; i < blocksLeft.toNumber() + 1; i++) {
+            let from = accounts[i % 2];
+            let to = accounts[1 - i % 2];
+            await govToken.transfer(to, 1, {from: from});
+        }
+
+        let lockedAmount = web3.toBigNumber(100e18);
+        let unlockAtBlock = web3.toBigNumber(web3.eth.blockNumber + 1);
+        await govToken.approveAndCall(tokenVault.address, lockedAmount, "");
+
+        locker = new Locker(await tokenVault.lockers(accounts[0]));
 
         await expectEvent(
-            tokenVault.unlockTokens(lockAmount),
-            tokenVault.TokensUnlocked,
+            tokenVault.unlockTokens(),
+            tokenVault.Unlock,
             {
-                owner: accounts[0],
-                amount: lockAmount
+                addr: accounts[0],
+                amount: locker.amount
             }
         );
     });
 
-    it('keeps track of the total amount of locked tokens', async () => {
-        let lockAmount = web3.toBigNumber(100e18);
-        
-        let totalLockedBefore = await tokenVault.totalLocked();
-        
-        await govToken.approve(tokenVault.address, lockAmount); 
-        await tokenVault.lockTokens(lockAmount);
-
-        let totalLockedAfter = await tokenVault.totalLocked();
-
-        assert.deepEqual(
-            totalLockedAfter,
-            totalLockedBefore.add(lockAmount),
-            "The total locked amount was not increased correctly"
-        );
-
-        totalLockedBefore = totalLockedAfter;
-
-        await tokenVault.unlockTokens(lockAmount);
-
-        totalLockedAfter = await tokenVault.totalLocked();
-
-        assert.deepEqual(
-            totalLockedAfter,
-            totalLockedBefore.sub(lockAmount),
-            "The total locked amount was not decreased correctly"
-        );
-    });
 });
 
 class Locker {
     constructor(lockerArray) {
         this.amount = lockerArray[0];
-        this.lastIncreasedAt = lockerArray[1];
+        this.unlockAtBlock = lockerArray[1];
     }
 }

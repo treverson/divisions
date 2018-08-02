@@ -3,32 +3,48 @@ pragma solidity 0.4.24;
 import "../../../divisions/gov/TokenVault.sol";
 import "../token/MockTokenRecipient.sol";
 
-contract MockTokenVault is ATokenVault, MockTokenRecipient {
-    uint256 totalLockedLastUpdatedAt;
-
-    function lockTokens(uint256 _amount) external {
-        if(totalLockedLastUpdatedAt < block.number){
-            totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.number;
-        }
-        Locker storage locker = lockers[msg.sender];
-
-        locker.amount += _amount;
-        locker.lastIncreasedAt = block.number;
-        totalLocked += _amount;
-        emit TokensLocked(msg.sender, _amount);
+contract MockTokenVault is ITokenVault, MockTokenRecipient {
+   
+    struct Locker{
+        uint256 amount;
+        uint256 unlockAtBlock;
     }
 
-    function unlockTokens(uint256 _amount) external {
-        if(totalLockedLastUpdatedAt < block.number){
-            totalLockedLastBlock = totalLocked;
-            totalLockedLastUpdatedAt = block.number;
-        }
-        require(lockers[msg.sender].amount >= _amount);
+    mapping(address => Locker) internal lockers_;
+    CallingToken internal token_;
 
-        lockers[msg.sender].amount -= _amount;
-        totalLocked -= _amount;
-        emit TokensUnlocked(msg.sender, _amount);
+    constructor(CallingToken _token) public {
+        token_ = _token;
     }
+
+    function token() external view returns (CallingToken) {
+        return token_;
+    }
+
+    function lockers(address _addr)
+        external
+        view
+        returns(uint256, uint256) 
+    {
+        Locker storage locker = lockers_[_addr];
+        return (locker.amount, locker.unlockAtBlock);
+    }
+
+    function lockTokens(address _addr, uint256 _amount, uint256 _unlockAtBlock) external {
+        emit LockTokensCalled(_addr, _amount, _unlockAtBlock);
+    }
+
+    function unlockTokens() external {
+        emit UnlockTokensCalled();
+    }
+
+    function setLockerParams(address _addr, uint256 _amount, uint256 _unlockAtBlock) external {
+        Locker storage locker = lockers_[_addr];
+        locker.amount = _amount;
+        locker.unlockAtBlock = _unlockAtBlock;
+    }
+
+    event LockTokensCalled(address addr, uint256 amount, uint256 unlockAtBlock);
+    event UnlockTokensCalled();
 
 }
