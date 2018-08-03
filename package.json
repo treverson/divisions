@@ -40,7 +40,8 @@
   "homepage": "https://divisions.com/",
   "husky": {
     "hooks": {
-      "pre-commit": "bash scripts/pre-commit-check.sh"
+      "pre-commit": "npm run truffle -- compile",
+      "pre-push": "bash scripts/pre-push-check.sh"
     }
   }
 }

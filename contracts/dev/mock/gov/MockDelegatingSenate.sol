@@ -49,6 +49,19 @@ contract MockDelegatingSenate is IDelegatingSenate {
         return (address(0), 0, 0, 0, 0, 0, false, 0, 0);
     }
 
+    function votes(address _voter, uint256 _proposalIndex)
+        external
+        view
+        returns (
+             uint256 proposalIndex,
+            uint256 weight,
+            bool inSupport
+        )
+    {
+        return (0, 0, false);
+    }
+
+
     function makeProposal(
         address _executor,
         bytes32 _calldataHash,
