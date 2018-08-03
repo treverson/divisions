@@ -66,9 +66,7 @@ contract('DelegatingSenate', async accounts => {
         );
 
         let proposal = new Proposal(await senate.proposals(proposalsLengthBefore));
-        // TODO fix?
-        console.error("Warning: ignoring proposal.totalLockedTokens");
-        delete proposal.totalLockedTokens;
+
         assert.deepEqual(
             proposal,
             {
@@ -77,6 +75,7 @@ contract('DelegatingSenate', async accounts => {
                 calldataHash: dataHash,
                 description: description,
                 createdAt: blockNumber,
+                votingEndsAt: blockNumber.add(DEBATING_PERIOD_BLOCKS),
                 executed: false,
                 totalYea: web3.toBigNumber(0),
                 totalNay: web3.toBigNumber(0)
@@ -117,10 +116,12 @@ contract('DelegatingSenate', async accounts => {
     });
 
     it('stores votes on proposals', async () => {
-        await tokenVault.lockTokens(100e18);
+        let allowedAmount = web3.toBigNumber(10e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
-        let weight = (await tokenVault.lockers(accounts[0]))[0];
-        await timeout.resolve(1000);
+        let allowance = await token.allowance(accounts[0], tokenVault.address);
+        let locked = (await tokenVault.lockers(accounts[0]))[0];
+        let weight = allowance.add(locked);
 
         let executor = await MockExecutor.new();
         let data = web3.toHex("iwannamakeaproposal");
@@ -132,17 +133,22 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        let voteIndex = (await expectEvent(
-            senate.vote(proposalIndex, true),
-            senate.Voted
-        )).voteIndex;
+        let voteCastAt = web3.eth.blockNumber;
+        await expectEvent(
+            senate.castVote(proposalIndex, true),
+            tokenVault.LockTokensCalled,
+            {
+                addr: accounts[0],
+                amount: weight,
+                unlockAtBlock: web3.toBigNumber(voteCastAt + DEBATING_PERIOD_BLOCKS)
+            }
+        );
 
-        let vote = new Vote(await senate.votes(proposalIndex, voteIndex));
-
+        let vote = new Vote(await senate.votes(accounts[0], proposalIndex));
         assert.deepEqual(
             vote,
             {
-                voter: accounts[0],
+                proposalIndex: proposalIndex,
                 weight: weight,
                 inSupport: true
             },
@@ -150,37 +156,23 @@ contract('DelegatingSenate', async accounts => {
         );
 
         await expectThrow(
-            senate.vote(proposalIndex, true),
+            senate.castVote(proposalIndex, true),
             "Cannot vote more than once"
         );
 
-        let lockedTokens = (await tokenVault.lockers(accounts[1]))[0];
 
-        await tokenVault.unlockTokens(lockedTokens, { from: accounts[1] });
+        await tokenVault.unlockTokens({ from: accounts[1] });
 
         await expectThrow(
-            senate.vote(proposalIndex, false, { from: accounts[1] }),
+            senate.castVote(proposalIndex, false, { from: accounts[1] }),
             "Can only vote when more than 1 tokens have been locked"
         );
-
-        await timeout.resolve(3000);
-
-        await tokenVault.lockTokens(weight, { from: accounts[1] });
-
-        await expectThrow(
-            senate.vote(proposalIndex, true, { from: accounts[1] }),
-            "Can only vote when the amount of locked tokens was increased last before the creation of the proposal"
-        );
-
-
     });
 
-
-    it('stores the voter\'s address with the proposal', async () => {
-        await tokenVault.lockTokens(100e18);
-
-        let weight = (await tokenVault.lockers(accounts[0]))[0];
-        await timeout.resolve(1000);
+    it('updates the proposal on vote', async () => {
+        let allowedAmount = web3.toBigNumber(10e18);
+        await token.approve(tokenVault.address, allowedAmount);
+        await token.transfer(accounts[1], allowedAmount);
 
         let executor = await MockExecutor.new();
         let data = web3.toHex("iwannamakeaproposal");
@@ -192,25 +184,41 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        let expectedVoteIndex = (await expectEvent(
-            senate.vote(proposalIndex, true),
-            senate.Voted
-        )).voteIndex;
+        let proposalBefore = new Proposal(await senate.proposals(proposalIndex));
+        
+        let weightYea, weightNay;
+        {
+            let allowance = await token.allowance(accounts[0], tokenVault.address);
+            let locked = (await tokenVault.lockers(accounts[0]))[0];
+            weightYea = allowance.add(locked);
+        }
+        await senate.castVote(proposalIndex, true);
+        await token.approve(tokenVault.address, allowedAmount, {from: accounts[1]});
+        {
+            let allowance = await token.allowance(accounts[1], tokenVault.address);
+            let locked = (await tokenVault.lockers(accounts[1]))[0];
+            weightNay = allowance.add(locked);
+        }
+        
+        await senate.castVote(proposalIndex, false, {from: accounts[1]});
 
-        let actualVoteIndex = await senate.voteIndex(proposalIndex, accounts[0]);
+        let proposalAfter = new Proposal(await senate.proposals(proposalIndex));
+        
+        let expectedProposal = Object.assign({}, proposalBefore);
+        expectedProposal.totalYea = weightYea;
+        expectedProposal.totalNay = weightNay;
 
         assert.deepEqual(
-            actualVoteIndex,
-            expectedVoteIndex,
-            "The vote index was not correct"
+            proposalAfter,
+            expectedProposal,
+            "The totalYea and totalNay of the proposal were not set correctly"
         );
+
     });
 
     it('only allows voting during the debating period', async () => {
-        await tokenVault.lockTokens(100e18);
-
-        let weight = (await tokenVault.lockers(accounts[0]))[0];
-        await timeout.resolve(1000);
+        let allowedAmount = web3.toBigNumber(10e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
         let executor = await MockExecutor.new();
         let data = web3.toHex("iwannamakeaproposal");
@@ -222,19 +230,26 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
         await expectThrow(
-            senate.vote(proposalIndex, true),
+            senate.castVote(proposalIndex, true),
             "Cannot vote after the debating period has ended"
         );
     });
 
     it('logs an event on vote', async () => {
-        await tokenVault.lockTokens(100e18);
+        let allowedAmount = web3.toBigNumber(10e18);
+        await token.approve(tokenVault.address, allowedAmount);
+
+        let allowance = await token.allowance(accounts[0], tokenVault.address);
+        let locked = (await tokenVault.lockers(accounts[0]))[0];
+        let weight = allowance.add(locked);
+
 
         let executor = await MockExecutor.new();
         let data = web3.toHex("iwannamakeaproposal");
@@ -247,13 +262,13 @@ contract('DelegatingSenate', async accounts => {
         )).proposalIndex;
 
         await expectEvent(
-            senate.vote(proposalIndex, true),
-            senate.Voted,
+            senate.castVote(proposalIndex, true),
+            senate.VoteCast,
             {
                 proposalIndex: proposalIndex,
-                voteIndex: '@any',
                 voter: accounts[0],
-                inSupport: true
+                inSupport: true,
+                weight: weight
             }
         );
 
@@ -264,10 +279,8 @@ contract('DelegatingSenate', async accounts => {
         let subject2 = await MockDelegatingSenateSubject.new(senate.address);
         let subject3 = await MockDelegatingSenateSubject.new(senate.address);
 
-        await tokenVault.lockTokens(100e18);
-
-        let weight = (await tokenVault.lockers(accounts[0]))[0];
-        await timeout.resolve(1000);
+        let allowedAmount = web3.toBigNumber(100e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
         let executor = await MockExecutor.new();
 
@@ -288,18 +301,18 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        await senate.vote(proposalIndex, true);
+        await senate.castVote(proposalIndex, true);
 
         await expectThrow(
             senate.executeProposal(proposalIndex, calldata),
             "A proposal cannot be executed when the debating period has not ended"
         );
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
-
         await expectThrow(
             senate.executeProposal(proposalIndex, "somewronghash"),
             "Cannot execute proposals if the bytecode is not correct"
@@ -327,8 +340,9 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
+        votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
@@ -341,13 +355,12 @@ contract('DelegatingSenate', async accounts => {
     it('executes simple proposals', async () => {
         let subject = await MockDelegatingSenateSubject.new(senate.address);
 
-        await tokenVault.lockTokens(100e18);
-        await timeout.resolve(1000);
+        let allowedAmount = web3.toBigNumber(100e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
         // senate.forwardCall(subject.address, subject.logEvent("Hello World!"))
         let calldata = "0x22bee494000000000000000000000000__subject__00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000064f302f1a20000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000c48656c6c6f20576f726c6421000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
             .replace("__subject__", subject.address.substr(2));
-
 
         let calldataHash = web3.sha3(calldata, { encoding: 'hex' });
 
@@ -359,15 +372,16 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        await senate.vote(proposalIndex, true);
+        await senate.castVote(proposalIndex, true);
 
         await expectThrow(
             senate.executeProposal(proposalIndex, calldata),
             "A proposal cannot be executed when the debating period has not ended"
         );
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
@@ -398,8 +412,9 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
+        votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
@@ -414,7 +429,8 @@ contract('DelegatingSenate', async accounts => {
         let subject2 = await MockDelegatingSenateSubject.new(senate.address);
         let subject3 = await MockDelegatingSenateSubject.new(senate.address);
 
-        await tokenVault.lockTokens(100e18);
+        let allowedAmount = web3.toBigNumber(100e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
         await timeout.resolve(1000);
 
@@ -435,10 +451,11 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        await senate.vote(proposalIndex, true);
+        await senate.castVote(proposalIndex, true);
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
@@ -460,9 +477,8 @@ contract('DelegatingSenate', async accounts => {
             "Can only change the voting rules by executing a proposal"
         );
 
-        await tokenVault.lockTokens(100e18);
-
-        await timeout.resolve(1000);
+        let allowedAmount = web3.toBigNumber(100e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
         let target = senate.address;
         let calldata = "0x158059e20000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000016345785d8a0000";
@@ -476,10 +492,11 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        await senate.vote(proposalIndex, true);
+        await senate.castVote(proposalIndex, true);
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
@@ -511,9 +528,8 @@ contract('DelegatingSenate', async accounts => {
             "Can only change the voting rules by executing a proposal"
         );
 
-        await tokenVault.lockTokens(100e18);
-
-        await timeout.resolve(1000);
+        let allowedAmount = web3.toBigNumber(100e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
         let target = senate.address;
         let calldata = "0x158059e200000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000de0b6b3a7640000";
@@ -527,10 +543,11 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        await senate.vote(proposalIndex, true);
+        await senate.castVote(proposalIndex, true);
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
@@ -541,14 +558,14 @@ contract('DelegatingSenate', async accounts => {
     });
 
     it('checks that a proposal has passed', async () => {
-        await tokenVault.lockTokens(100e18);
-        await tokenVault.lockTokens(100e18, { from: accounts[1] });
-        await tokenVault.lockTokens(100e18, { from: accounts[2] });
-        await tokenVault.lockTokens(100e18, { from: accounts[3] });
-        await tokenVault.lockTokens(1, { from: accounts[4] });
-        await tokenVault.lockTokens(1, { from: accounts[5] });
-        await tokenVault.lockTokens(1, { from: accounts[6] });
-        await tokenVault.lockTokens(1, { from: accounts[7] });
+        await token.approve(tokenVault.address, 20e18);
+        await token.approve(tokenVault.address, 20e18, { from: accounts[1] });
+        await token.approve(tokenVault.address, 20e18, { from: accounts[2] });
+        await token.approve(tokenVault.address, 20e18, { from: accounts[3] });
+        await token.approve(tokenVault.address, 1, { from: accounts[4] });
+        await token.approve(tokenVault.address, 1, { from: accounts[5] });
+        await token.approve(tokenVault.address, 1, { from: accounts[6] });
+        await token.approve(tokenVault.address, 1, { from: accounts[7] });
 
         let executor = await MockExecutor.new();
         let data = web3.toHex("iwannamakeaproposal");
@@ -565,27 +582,27 @@ contract('DelegatingSenate', async accounts => {
         );
 
         // Yea += 1 => 1
-        await senate.vote(proposalIndex, true, { from: accounts[4] });
+        await senate.castVote(proposalIndex, true, { from: accounts[4] });
         assert(!await senate.proposalPassed(proposalIndex),
             "Proposal did not get enough votes and should not pass"
         );
 
         // Nay += 100e18 => 100e18
-        await senate.vote(proposalIndex, false, { from: accounts[1] });
+        await senate.castVote(proposalIndex, false, { from: accounts[1] });
         assert(!await senate.proposalPassed(proposalIndex),
             "Proposal got more nay than yea votes and should not pass"
         );
 
         // Nay += 1 => 100e18 + 1
-        await senate.vote(proposalIndex, false, { from: accounts[5] });
+        await senate.castVote(proposalIndex, false, { from: accounts[5] });
         // Yea += 100e18 => 100e18 + 1
-        await senate.vote(proposalIndex, true, { from: accounts[2] });
+        await senate.castVote(proposalIndex, true, { from: accounts[2] });
         assert(!await senate.proposalPassed(proposalIndex),
             "Proposal got the same amount of yea and nay votes and should not pass"
         );
 
         // Yea += 1 => 100e18 + 2
-        await senate.vote(proposalIndex, true, { from: accounts[6] });
+        await senate.castVote(proposalIndex, true, { from: accounts[6] });
         assert(await senate.proposalPassed(proposalIndex),
             "Proposal got more yea than nay votes and should pass"
         );
@@ -607,8 +624,9 @@ contract('DelegatingSenate', async accounts => {
             "The proposal debating period has not ended yet"
         );
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 
@@ -626,7 +644,8 @@ contract('DelegatingSenate', async accounts => {
             "Only the president can set the president directly"
         );
 
-        await tokenVault.lockTokens(100e18);
+        let allowedAmount = web3.toBigNumber(100e18);
+        await token.approve(tokenVault.address, allowedAmount);
 
         let target = senate.address;
 
@@ -643,10 +662,11 @@ contract('DelegatingSenate', async accounts => {
             senate.ProposalMade
         )).proposalIndex;
 
-        await senate.vote(proposalIndex, true);
+        await senate.castVote(proposalIndex, true);
 
+        let votingEndsAt = new Proposal(await senate.proposals(proposalIndex)).votingEndsAt;
         // Add some blocks to the chain to pass the debating period
-        for (let i = 0; i < DEBATING_PERIOD_BLOCKS; i++) {
+        for (let i = 0; web3.eth.blockNumber < votingEndsAt.toNumber(); i++) {
             await web3.eth.sendTransaction({ from: accounts[i % 2], to: accounts[1 - (i % 2)], value: 1 });
         }
 

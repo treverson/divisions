@@ -12,6 +12,7 @@ module.exports = async (deployer, network, accounts) => {
         StakeManager,
         MockCasper.address,
         validator,
-        Treasury.address
+        Treasury.address,
+        accounts[0]
     );
 }

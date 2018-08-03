@@ -7,6 +7,7 @@ import "./MockWithdrawalBox.sol";
 contract MockStakeManager is AStakeManager {
     
     constructor(ACasper _casper, ATreasury _treasury)
+    SenateOwnable(IDelegatingSenate(msg.sender))
     public
     {
         casper = _casper;

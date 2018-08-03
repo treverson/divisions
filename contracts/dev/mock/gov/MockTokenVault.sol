@@ -31,14 +31,17 @@ contract MockTokenVault is ITokenVault, MockTokenRecipient {
     }
 
     function lockTokens(address _addr, uint256 _amount, uint256 _unlockAtBlock) external {
+        setLockerParams(_addr, _amount, _unlockAtBlock);
         emit LockTokensCalled(_addr, _amount, _unlockAtBlock);
     }
 
     function unlockTokens() external {
+        Locker storage locker = lockers_[msg.sender];
+        locker.amount = 0;
         emit UnlockTokensCalled();
     }
 
-    function setLockerParams(address _addr, uint256 _amount, uint256 _unlockAtBlock) external {
+    function setLockerParams(address _addr, uint256 _amount, uint256 _unlockAtBlock) public {
         Locker storage locker = lockers_[_addr];
         locker.amount = _amount;
         locker.unlockAtBlock = _unlockAtBlock;

@@ -142,16 +142,16 @@ contract('TokenVault', async accounts => {
     it('logs an event on unlockTokens', async () => {
         let locker = new Locker(await tokenVault.lockers(accounts[0]));
 
-        let blocksLeft = locker.unlockAtBlock.minus(web3.eth.blockNumber);
+        // let blocksLeft = locker.unlockAtBlock.minus(web3.eth.blockNumber);
         // Let some blocks pass
-        for(let i = 0; i < blocksLeft.toNumber() + 1; i++) {
+        for(let i = 0; web3.eth.blockNumber <= locker.unlockAtBlock.toNumber(); i++) {
             let from = accounts[i % 2];
             let to = accounts[1 - i % 2];
             await govToken.transfer(to, 1, {from: from});
         }
 
         let lockedAmount = web3.toBigNumber(100e18);
-        let unlockAtBlock = web3.toBigNumber(web3.eth.blockNumber + 1);
+
         await govToken.approveAndCall(tokenVault.address, lockedAmount, "");
 
         locker = new Locker(await tokenVault.lockers(accounts[0]));

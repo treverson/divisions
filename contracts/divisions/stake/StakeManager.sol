@@ -81,8 +81,10 @@ contract StakeManager is AStakeManager {
     constructor(
         ACasper _casper,
         address _validator,
-        ATreasury _treasury
+        ATreasury _treasury,
+        IDelegatingSenate _owner
     ) 
+        SenateOwnable(_owner)
         public 
     {
         casper = _casper;

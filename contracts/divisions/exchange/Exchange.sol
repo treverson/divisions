@@ -135,8 +135,8 @@ contract Exchange is AExchange {
         buyOrderCursor = 0;
         sellOrderCursor = 0;
 
-        // setMinBuyOrderAmountTo(_minBuyOrderAmount);
-        // setMinSellOrderAmountTo(_minSellOrderAmount);
+        setMinBuyOrderAmountTo(_minBuyOrderAmount);
+        setMinSellOrderAmountTo(_minSellOrderAmount);
     }
     
     function setMinBuyOrderAmount(uint256 _min) external onlyOwner {

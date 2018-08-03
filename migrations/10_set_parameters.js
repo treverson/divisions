@@ -40,6 +40,12 @@ module.exports = async (deployer, network, accounts) => {
         await deployedDivToken.transferMintership(Exchange.address);
 
         /** Transfer ownership of ownable contracts to DelegatingSenate **/
+        
+        console.log('Transfering ownership of TokenVault to DelegatingSenate ' + DelegatingSenate.address);
+        let deployedTokenVault = TokenVault.at(TokenVault.address);
+        await deployedTokenVault.transferOwnership(DelegatingSenate.address);
+    
+
         console.log('Transfering ownership of StakeManager to DelegatingSenate ' + DelegatingSenate.address);
         await deployedStakeManager.transferOwnership(DelegatingSenate.address);
         

@@ -49,7 +49,7 @@ contract DelegatingSenate is IDelegatingSenate {
 
     Proposal[] internal proposals_;
 
-    mapping(address => mapping(uint256 => Vote)) votes;
+    mapping(address => mapping(uint256 => Vote)) internal votes_;
 
     constructor(
         address _president,
@@ -119,6 +119,20 @@ contract DelegatingSenate is IDelegatingSenate {
         );
     }
 
+    function votes(address _voter, uint256 _proposalIndex)
+        external
+        view
+        returns (
+            uint256 proposalIndex,
+            uint256 weight,
+            bool inSupport
+        )
+    {
+        Vote storage vote = votes_[_voter][_proposalIndex];
+        return (vote.proposalIndex, vote.weight, vote.inSupport);
+    }
+
+
     // external functions
 
     function makeProposal(
@@ -152,14 +166,14 @@ contract DelegatingSenate is IDelegatingSenate {
         uint256 lockedAmount;
         uint256 currentUnlockAtBlock;
         (lockedAmount, currentUnlockAtBlock) = tokenVault_.lockers(msg.sender);
-        uint256 allowance = token.allowance(msg.sender, address(this));
+        uint256 allowance = token.allowance(msg.sender, address(tokenVault_));
         
         uint256 weight = allowance.add(lockedAmount);
 
         require(weight > 0, "Cannot vote with 0 weight");
         require(!debatingPeriodEnded(proposal), "The debating period has ended");
 
-        Vote storage vote = votes[msg.sender][_proposalIndex];
+        Vote storage vote = votes_[msg.sender][_proposalIndex];
 
         require(vote.weight == 0, "That address already voted");
 
@@ -171,7 +185,7 @@ contract DelegatingSenate is IDelegatingSenate {
         // Tokens can be unlocked after the last debation period has ended
         uint256 unlockAtBlock = Math.max256(currentUnlockAtBlock, proposal.votingEndsAt);
 
-        // Lock the allowedTokens
+        // Lock the tokens backing this vote
         tokenVault_.lockTokens(msg.sender, allowance, unlockAtBlock);
 
         // Register the vote

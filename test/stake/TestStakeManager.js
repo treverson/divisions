@@ -38,6 +38,7 @@ contract('StakeManager', async accounts => {
             casper.address,
             validator,
             treasury.address,
+            accounts[0]
         );
 
         await treasury.setStakeManager(stakeManager.address);

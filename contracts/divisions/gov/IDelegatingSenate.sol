@@ -26,6 +26,15 @@ interface IDelegatingSenate {
             uint256 totalNay
         );
 
+    function votes(address _voter, uint256 _proposalIndex)
+        external
+        view
+        returns (
+             uint256 proposalIndex,
+            uint256 weight,
+            bool inSupport
+        );
+
     function makeProposal(
         address _executor,
         bytes32 _calldataHash,
