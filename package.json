@@ -1,6 +1,6 @@
 {
-  "name": "divisionscore",
-  "version": "0.0.1",
+  "name": "divisions",
+  "version": "0.1.0",
   "description": "Divisions stake pool",
   "main": "truffle-config.js",
   "directories": {
@@ -35,7 +35,7 @@
   "author": "Baksteen Blockchain B.V.",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/hdoordt/divisionsCore/issues"
+    "url": "https://github.com/baksteenblockchain/divisions/issues"
   },
   "homepage": "https://divisions.com/",
   "husky": {
